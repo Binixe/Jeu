@@ -4,7 +4,7 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<meta name="theme-color" content="#dff4e8" />
-		<title>Petit Slime</title>
+		<title>Petit Slime - Jeu</title>
 		<style>
 			:root {
 				color-scheme: light;
@@ -192,6 +192,241 @@
 				transform: translate(-50%, -50%);
 			}
 
+			.interaction-hint,
+			.loot-notice {
+				position: absolute;
+				z-index: 2;
+				border: 1px solid rgba(47, 92, 75, 0.18);
+				background: rgba(248, 255, 248, 0.86);
+				color: #315d4c;
+				backdrop-filter: blur(8px);
+				pointer-events: none;
+			}
+
+			.interaction-hint {
+				bottom: 86px;
+				left: 50%;
+				max-width: calc(100vw - 32px);
+				padding: 9px 14px;
+				border-radius: 7px;
+				font-size: 13px;
+				font-weight: 700;
+				text-align: center;
+				transform: translateX(-50%);
+			}
+
+			.interaction-hint:empty,
+			.loot-notice:empty {
+				display: none;
+			}
+
+			.inventory-status {
+				position: absolute;
+				z-index: 3;
+				top: 80px;
+				right: 22px;
+				padding: 8px 11px;
+				border: 1px solid rgba(47, 92, 75, 0.18);
+				border-radius: 6px;
+				background: rgba(248, 255, 248, 0.9);
+				color: #315d4c;
+				backdrop-filter: blur(8px);
+				cursor: pointer;
+				font: inherit;
+				font-size: 12px;
+				font-weight: 700;
+			}
+
+			.inventory-status:hover {
+				background: #315d4c;
+				color: #f5fff3;
+			}
+
+			.inventory-status:focus-visible,
+			.inventory-close:focus-visible {
+				outline: 2px solid #e08b68;
+				outline-offset: 2px;
+			}
+
+			.inventory-panel {
+				position: absolute;
+				z-index: 3;
+				top: 126px;
+				right: 22px;
+				width: min(320px, calc(100vw - 32px));
+				max-height: min(420px, calc(100vh - 150px));
+				overflow: auto;
+				padding: 14px;
+				border: 1px solid rgba(47, 92, 75, 0.2);
+				border-radius: 8px;
+				background: rgba(248, 255, 248, 0.94);
+				color: #315d4c;
+				box-shadow: 0 12px 32px rgba(34, 69, 54, 0.16);
+				backdrop-filter: blur(12px);
+			}
+
+			.inventory-panel[hidden] {
+				display: none;
+			}
+
+			.inventory-panel header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding-bottom: 10px;
+				border-bottom: 1px solid rgba(47, 92, 75, 0.16);
+			}
+
+			.inventory-panel h2 {
+				margin: 0;
+				font-size: 15px;
+			}
+
+			.inventory-close {
+				width: 30px;
+				height: 30px;
+				border: 0;
+				border-radius: 5px;
+				background: transparent;
+				color: inherit;
+				cursor: pointer;
+				font: inherit;
+				font-size: 20px;
+			}
+
+			.inventory-empty {
+				margin: 14px 0 2px;
+				color: #648071;
+				font-size: 13px;
+			}
+
+			.inventory-items {
+				display: grid;
+				gap: 6px;
+				margin: 12px 0 0;
+				padding: 0;
+				list-style: none;
+			}
+
+			.inventory-items li {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 8px;
+				padding: 8px 9px;
+				border-left: 3px solid #829b76;
+				background: rgba(177, 202, 177, 0.22);
+				font-size: 13px;
+			}
+
+			.inventory-item-name {
+				min-width: 0;
+				overflow-wrap: anywhere;
+			}
+
+			.inventory-action {
+				flex: none;
+				padding: 6px 8px;
+				border: 1px solid rgba(47, 92, 75, 0.22);
+				border-radius: 5px;
+				background: rgba(248, 255, 248, 0.8);
+				color: #315d4c;
+				cursor: pointer;
+				font: inherit;
+				font-size: 11px;
+				font-weight: 700;
+			}
+
+			.inventory-action:hover:not(:disabled) {
+				background: #315d4c;
+				color: #f5fff3;
+			}
+
+			.inventory-action:disabled {
+				cursor: default;
+				opacity: 0.55;
+			}
+
+			.health-hud {
+				position: absolute;
+				z-index: 2;
+				bottom: 20px;
+				left: 20px;
+				width: min(290px, calc(100vw - 32px));
+				padding: 10px 12px;
+				border: 1px solid rgba(245, 255, 244, 0.22);
+				border-radius: 6px;
+				background: rgba(35, 54, 46, 0.86);
+				color: #f5fff3;
+				backdrop-filter: blur(8px);
+				pointer-events: none;
+			}
+
+			.health-heading {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 7px;
+				font-size: 11px;
+				font-weight: 700;
+			}
+
+			.health-track {
+				height: 9px;
+				overflow: hidden;
+				border-radius: 2px;
+				background: rgba(9, 20, 15, 0.7);
+			}
+
+			.health-fill {
+				width: 100%;
+				height: 100%;
+				background: #9dc46e;
+				transition: width 180ms ease, background-color 180ms ease;
+			}
+
+			.health-hud.is-low .health-fill {
+				background: #d66e5e;
+			}
+
+			.health-state {
+				display: block;
+				margin-top: 6px;
+				color: #c4d2c5;
+				font-size: 10px;
+			}
+
+			.combat-hint {
+				position: absolute;
+				z-index: 2;
+				bottom: 132px;
+				left: 50%;
+				padding: 9px 14px;
+				border: 1px solid rgba(93, 52, 45, 0.2);
+				border-radius: 7px;
+				background: rgba(250, 239, 222, 0.92);
+				color: #71483d;
+				font-size: 13px;
+				font-weight: 700;
+				text-align: center;
+				transform: translateX(-50%);
+				pointer-events: none;
+			}
+
+			.combat-hint:empty {
+				display: none;
+			}
+
+			.loot-notice {
+				top: 80px;
+				left: 18px;
+				max-width: min(250px, calc(100vw - 36px));
+				padding: 8px 11px;
+				border-radius: 6px;
+				font-size: 12px;
+				font-weight: 700;
+			}
+
 			@media (max-width: 600px) {
 				.camera-modes {
 					top: auto;
@@ -208,6 +443,38 @@
 				.camera-control {
 					top: 16px;
 					right: 16px;
+				}
+
+				.interaction-hint {
+					bottom: 82px;
+				}
+
+				.inventory-status {
+					top: 70px;
+					right: 14px;
+				}
+
+				.inventory-panel {
+					top: 116px;
+					right: 14px;
+					max-height: calc(100vh - 136px);
+				}
+
+				.loot-notice {
+					top: 116px;
+					left: 14px;
+				}
+
+				.health-hud {
+					top: 70px;
+					bottom: auto;
+					left: 14px;
+					width: min(240px, calc(100vw - 132px));
+				}
+
+				.combat-hint {
+					bottom: 132px;
+					max-width: calc(100vw - 28px);
 				}
 			}
 		</style>
@@ -233,6 +500,25 @@
 			<button class="camera-control" id="camera-control" type="button" title="Activer le contrôle de la souris" aria-label="Activer le contrôle de la souris">
 				<span aria-hidden="true"></span>
 			</button>
+			<output class="interaction-hint" id="interaction-hint" aria-live="polite"></output>
+			<button class="inventory-status" id="inventory-status" type="button" aria-controls="inventory-panel" aria-expanded="false">Inventaire · 0</button>
+			<section class="inventory-panel" id="inventory-panel" aria-label="Inventaire" hidden>
+				<header>
+					<h2>Inventaire</h2>
+					<button class="inventory-close" id="inventory-close" type="button" aria-label="Fermer l’inventaire">×</button>
+				</header>
+				<p class="inventory-empty" id="inventory-empty">Ton sac est vide.</p>
+				<ul class="inventory-items" id="inventory-items"></ul>
+			</section>
+			<section class="health-hud" id="health-hud" aria-label="État de santé">
+				<div class="health-heading"><span>VITALITÉ</span><output id="health-value">100%</output></div>
+				<div class="health-track" id="health-meter" role="meter" aria-label="Santé" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100">
+					<div class="health-fill" id="health-fill"></div>
+				</div>
+				<output class="health-state" id="health-state">En forme</output>
+			</section>
+			<output class="loot-notice" id="loot-notice" aria-live="polite"></output>
+			<output class="combat-hint" id="combat-hint" aria-live="polite"></output>
 		</main>
 		<script type="module">
 			import * as THREE from "/node_modules/three/build/three.module.js";
@@ -246,10 +532,37 @@
 			const cameraControl = document.querySelector("#camera-control");
 			const cameraModeButtons = [...document.querySelectorAll("[data-camera-mode]")];
 			const aimReticle = document.querySelector(".aim-reticle");
+			const interactionHint = document.querySelector("#interaction-hint");
+			const inventoryStatus = document.querySelector("#inventory-status");
+			const inventoryPanel = document.querySelector("#inventory-panel");
+			const inventoryItems = document.querySelector("#inventory-items");
+			const inventoryEmpty = document.querySelector("#inventory-empty");
+			const inventoryClose = document.querySelector("#inventory-close");
+			const lootNotice = document.querySelector("#loot-notice");
+			const healthHud = document.querySelector("#health-hud");
+			const healthMeter = document.querySelector("#health-meter");
+			const healthFill = document.querySelector("#health-fill");
+			const healthValue = document.querySelector("#health-value");
+			const healthStateLabel = document.querySelector("#health-state");
+			const combatHint = document.querySelector("#combat-hint");
 			const cameraState = { mode: 2, yaw: Math.PI, pitch: 0.2, distance: 5.2, baseDistance: 5.2 };
 			const pressedKeys = new Set();
+			const inventory = [];
+			let equippedWeapon = null;
+			const enemies = [];
+			const playerHealth = { current: 100, max: 100 };
 			const movementVelocity = new THREE.Vector3();
 			const desiredVelocity = new THREE.Vector3();
+			const playerStartPosition = new THREE.Vector3(0, 0, 0);
+			let activeBuilding = null;
+			let nearbyBuilding = null;
+			let nearbyContainer = null;
+			let nearbyContainerDistance = Infinity;
+			let lootNoticeUntil = 0;
+			let combatMessage = "";
+			let combatMessageUntil = 0;
+			let nextAttackAt = 0;
+			let gameOver = false;
 			let dragPointer = null;
 
 			const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -285,8 +598,234 @@
 			}
 			scene.add(groundGrid);
 
+			const town = new THREE.Group();
+			scene.add(town);
+			const buildings = [];
+
+			const road = new THREE.Mesh(
+				new THREE.PlaneGeometry(7.2, 70),
+				new THREE.MeshStandardMaterial({ color: 0x879a91, roughness: 0.94 }),
+			);
+			road.rotation.x = -Math.PI / 2;
+			road.position.set(0, -1.115, 7);
+			town.add(road);
+			const sideRoadMaterial = new THREE.MeshStandardMaterial({ color: 0x899b92, roughness: 0.94 });
+			const crossingSidewalkMaterial = new THREE.MeshStandardMaterial({ color: 0xd5cdb5, roughness: 0.92 });
+			for (let index = 0; index < 4; index += 1) {
+				const crossingZ = index * 10;
+				const sideRoad = new THREE.Mesh(new THREE.PlaneGeometry(36, 3.8), sideRoadMaterial);
+				sideRoad.rotation.x = -Math.PI / 2;
+				sideRoad.position.set(0, -1.108, crossingZ);
+				town.add(sideRoad);
+
+				for (const side of [-1, 1]) {
+					const crossingSidewalk = new THREE.Mesh(
+						new THREE.PlaneGeometry(36, 0.8),
+						crossingSidewalkMaterial,
+					);
+					crossingSidewalk.rotation.x = -Math.PI / 2;
+					crossingSidewalk.position.set(0, -1.102, crossingZ + side * 2.35);
+					town.add(crossingSidewalk);
+				}
+			}
+
+			const sidewalkMaterial = new THREE.MeshStandardMaterial({ color: 0xd5cdb5, roughness: 0.92 });
+			const sidewalkStones = new THREE.MeshStandardMaterial({ color: 0xb9b59f, roughness: 0.9 });
+			for (const side of [-1, 1]) {
+				const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 70), sidewalkMaterial);
+				sidewalk.rotation.x = -Math.PI / 2;
+				sidewalk.position.set(side * 4.25, -1.105, 7);
+				town.add(sidewalk);
+
+				for (let index = 0; index < 18; index += 1) {
+					const seam = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.012, 0.035), sidewalkStones);
+					seam.position.set(side * 4.25, -1.095, -26 + index * 3.9);
+					town.add(seam);
+				}
+			}
+
+			const facadeMaterials = [0xf0b69d, 0x9bc7bd, 0xe7d28f, 0xb8b0d1].map((color) =>
+				new THREE.MeshStandardMaterial({ color, roughness: 0.82 }),
+			);
+			const roofMaterials = [0x9c6555, 0x547b76, 0xa77b4f, 0x756b83].map((color) =>
+				new THREE.MeshStandardMaterial({ color, roughness: 0.88 }),
+			);
+			const trimMaterial = new THREE.MeshStandardMaterial({ color: 0xf6e6c6, roughness: 0.72 });
+			const doorMaterials = [0x785a49, 0x4d6c68, 0x805b49].map((color) =>
+				new THREE.MeshStandardMaterial({ color, roughness: 0.68 }),
+			);
+			const glassMaterial = new THREE.MeshStandardMaterial({
+				color: 0xa8d7dc,
+				metalness: 0.08,
+				roughness: 0.22,
+				emissive: 0x315960,
+				emissiveIntensity: 0.12,
+			});
+			const interiorFloorMaterial = new THREE.MeshStandardMaterial({ color: 0xb69b77, roughness: 0.96 });
+			const interiorWallMaterial = new THREE.MeshStandardMaterial({ color: 0xe7d8bd, roughness: 0.9, side: THREE.DoubleSide });
+			const furnitureMaterial = new THREE.MeshStandardMaterial({ color: 0x785b48, roughness: 0.82 });
+			const fabricMaterial = new THREE.MeshStandardMaterial({ color: 0x98aaa0, roughness: 0.94 });
+			const searchMaterials = [0x647b71, 0x84715c, 0x596c74].map((color) =>
+				new THREE.MeshStandardMaterial({ color, roughness: 0.78 }),
+			);
+
+			function addHouse(x, z, side, index) {
+				const house = new THREE.Group();
+				house.position.set(x, -1.14, z);
+				house.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+				town.add(house);
+				const exterior = new THREE.Group();
+				house.add(exterior);
+				const interior = new THREE.Group();
+				interior.visible = false;
+				house.add(interior);
+
+				const foundation = new THREE.Mesh(
+					new THREE.BoxGeometry(3.75, 0.22, 3.55),
+					trimMaterial,
+				);
+				foundation.position.y = 0.12;
+				exterior.add(foundation);
+
+				const walls = new THREE.Mesh(
+					new THREE.BoxGeometry(3.45, 2.25, 3.25),
+					facadeMaterials[index % facadeMaterials.length],
+				);
+				walls.position.y = 1.28;
+				exterior.add(walls);
+
+				const roofMaterial = roofMaterials[index % roofMaterials.length];
+				for (const slope of [-1, 1]) {
+					const roofPanel = new THREE.Mesh(
+						new THREE.BoxGeometry(2.15, 0.18, 3.72),
+						roofMaterial,
+					);
+					roofPanel.position.set(slope * 0.86, 2.52, 0);
+					roofPanel.rotation.z = -slope * 0.46;
+					exterior.add(roofPanel);
+				}
+
+				const door = new THREE.Mesh(
+					new THREE.BoxGeometry(0.76, 1.48, 0.13),
+					doorMaterials[index % doorMaterials.length],
+				);
+				door.position.set(0, 0.86, 1.68);
+				exterior.add(door);
+
+				const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(0.94, 1.58, 0.08), trimMaterial);
+				doorFrame.position.set(0, 0.92, 1.62);
+				exterior.add(doorFrame);
+				door.position.z = 1.7;
+
+				const doorHandle = new THREE.Mesh(
+					new THREE.SphereGeometry(0.055, 12, 10),
+					new THREE.MeshStandardMaterial({ color: 0xd8b45d, metalness: 0.55, roughness: 0.32 }),
+				);
+				doorHandle.position.set(0.23, 0.82, 1.79);
+				exterior.add(doorHandle);
+
+				for (const windowX of [-1.05, 1.05]) {
+					const windowFrame = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.78, 0.12), trimMaterial);
+					windowFrame.position.set(windowX, 1.68, 1.66);
+					exterior.add(windowFrame);
+
+					const windowGlass = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.13), glassMaterial);
+					windowGlass.position.set(windowX, 1.68, 1.73);
+					exterior.add(windowGlass);
+
+					const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.6, 0.025), trimMaterial);
+					mullion.position.set(windowX, 1.68, 1.81);
+					exterior.add(mullion);
+
+					const crossbar = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.045, 0.025), trimMaterial);
+					crossbar.position.set(windowX, 1.68, 1.81);
+					exterior.add(crossbar);
+				}
+
+				const chimney = new THREE.Mesh(
+					new THREE.BoxGeometry(0.38, 0.85, 0.42),
+					roofMaterial,
+				);
+				chimney.position.set(-0.88, 2.75, -0.72);
+				exterior.add(chimney);
+
+				const floor = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.08, 3.15), interiorFloorMaterial);
+				floor.position.y = 0.04;
+				interior.add(floor);
+
+				const backWall = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1, 0.12), interiorWallMaterial);
+				backWall.position.set(0, 0.58, -1.53);
+				interior.add(backWall);
+				const frontWall = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1, 0.12), interiorWallMaterial);
+				frontWall.position.set(0, 0.58, 1.53);
+				interior.add(frontWall);
+				for (const wallSide of [-1, 1]) {
+					const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1, 3.1), interiorWallMaterial);
+					sideWall.position.set(wallSide * 1.62, 0.58, 0);
+					interior.add(sideWall);
+				}
+				const ceiling = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.12, 3.15), interiorWallMaterial);
+				ceiling.position.y = 2.94;
+				ceiling.visible = false;
+				interior.add(ceiling);
+
+				const bedBase = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.3, 1.7), furnitureMaterial);
+				bedBase.position.set(-0.88, 0.24, 0.14);
+				interior.add(bedBase);
+				const mattress = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.18, 1.62), fabricMaterial);
+				mattress.position.set(-0.88, 0.46, 0.14);
+				interior.add(mattress);
+				const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.12, 0.38), trimMaterial);
+				pillow.position.set(-0.88, 0.59, -0.43);
+				interior.add(pillow);
+
+				const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.85), furnitureMaterial);
+				tableTop.position.set(0.48, 0.75, 0.42);
+				interior.add(tableTop);
+				for (const tableX of [0.02, 0.94]) {
+					for (const tableZ of [0.12, 0.72]) {
+						const tableLeg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.68, 0.1), furnitureMaterial);
+						tableLeg.position.set(tableX, 0.38, tableZ);
+						interior.add(tableLeg);
+					}
+				}
+
+				const containers = [];
+				const containerSpecs = [
+					{ label: "buffet", position: [-0.92, 0.48, -0.95], size: [0.82, 0.82, 0.56], loot: ["boîte de haricots", "bouteille d’eau", "conserve"] },
+					{ label: "commode", position: [1.02, 0.43, -0.88], size: [0.76, 0.72, 0.52], loot: ["bandage", "médicaments", "boîte de conserve"] },
+					{ label: "placard", position: [1.02, 0.55, 0.72], size: [0.72, 0.95, 0.5], loot: ["médicaments", "couteau de cuisine", "paquet de biscuits"] },
+				];
+				for (const [containerIndex, spec] of containerSpecs.entries()) {
+					const furniture = new THREE.Mesh(
+						new THREE.BoxGeometry(...spec.size),
+						searchMaterials[(index + containerIndex) % searchMaterials.length],
+					);
+					furniture.position.set(...spec.position);
+					interior.add(furniture);
+					containers.push({ mesh: furniture, label: spec.label, loot: spec.loot[index % spec.loot.length], searched: false });
+				}
+
+				buildings.push({
+					group: house,
+					exterior,
+					interior,
+					ceiling,
+					containers,
+					doorPosition: new THREE.Vector3(0, 0.95, 1.72),
+				});
+				house.scale.setScalar(1.4);
+			}
+
+			for (let index = 0; index < 5; index += 1) {
+				const z = -5 + index * 10;
+				addHouse(-7.4, z, -1, index);
+				addHouse(7.4, z, 1, index + 1);
+			}
+
 			const markerRingMaterial = new THREE.MeshStandardMaterial({ color: 0xe59a75, emissive: 0x5d2917, emissiveIntensity: 0.12, roughness: 0.42 });
 			const markerCoreMaterial = new THREE.MeshStandardMaterial({ color: 0xf3dc9f, emissive: 0x624b1d, emissiveIntensity: 0.1, roughness: 0.38 });
+			const worldMarkers = [];
 			function addAimMarker(x, y, z, scale) {
 				const marker = new THREE.Group();
 				marker.position.set(x, y, z);
@@ -296,6 +835,7 @@
 				const core = new THREE.Mesh(new THREE.SphereGeometry(0.12, 24, 18), markerCoreMaterial);
 				marker.add(core);
 				scene.add(marker);
+				worldMarkers.push(marker);
 			}
 
 			addAimMarker(0, 0.3, 8, 1);
@@ -303,6 +843,8 @@
 			addAimMarker(3.4, 0.4, 15, 1.1);
 
 			const slime = new THREE.Group();
+			const slimeWorldScale = 0.7;
+			slime.scale.setScalar(slimeWorldScale);
 			scene.add(slime);
 			fpsCamera.position.set(0, 0.18, 0);
 			fpsCamera.rotation.order = "YXZ";
@@ -398,6 +940,102 @@
 			shadow.scale.set(1.35, 0.46, 1);
 			slime.add(shadow);
 
+			const zombieBodyGeometry = new THREE.LatheGeometry([
+				new THREE.Vector2(0, -0.63),
+				new THREE.Vector2(0.42, -0.63),
+				new THREE.Vector2(0.68, -0.48),
+				new THREE.Vector2(0.78, -0.18),
+				new THREE.Vector2(0.72, 0.12),
+				new THREE.Vector2(0.54, 0.38),
+				new THREE.Vector2(0.28, 0.56),
+				new THREE.Vector2(0, 0.62),
+			], 14);
+			const zombieTendrilMaterial = new THREE.MeshStandardMaterial({ color: 0x455b4b, roughness: 0.94 });
+			const zombieScarMaterial = new THREE.MeshStandardMaterial({ color: 0x485448, roughness: 0.9 });
+			const zombieEyeMaterial = new THREE.MeshStandardMaterial({
+				color: 0x8d3e35,
+				emissive: 0xa92e26,
+				emissiveIntensity: 1.1,
+				roughness: 0.3,
+			});
+
+			function createZombieSlime(x, z, index) {
+				const group = new THREE.Group();
+				const baseColor = [0x77836b, 0x697b70, 0x85836a, 0x65766c][index % 4];
+				const bodyMaterial = new THREE.MeshPhysicalMaterial({
+					color: baseColor,
+					roughness: 0.48,
+					metalness: 0.02,
+					clearcoat: 0.3,
+					clearcoatRoughness: 0.4,
+				});
+				const body = new THREE.Mesh(zombieBodyGeometry, bodyMaterial);
+				body.scale.set(1, 1, 0.78);
+				group.add(body);
+
+				const scar = new THREE.Mesh(new THREE.SphereGeometry(0.2, 10, 8), zombieScarMaterial);
+				scar.position.set(-0.3, -0.2, 0.49);
+				scar.scale.set(1.3, 0.72, 0.35);
+				group.add(scar);
+
+				for (const eyeX of [-0.24, 0.24]) {
+					const socket = new THREE.Mesh(
+						new THREE.SphereGeometry(0.13, 12, 10),
+						zombieScarMaterial,
+					);
+					socket.position.set(eyeX, 0.12, 0.49);
+					socket.scale.set(1.05, 0.9, 0.55);
+					group.add(socket);
+
+					const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 10), zombieEyeMaterial);
+					eye.position.set(eyeX, 0.12, 0.55);
+					group.add(eye);
+				}
+
+				const mouthCurve = new THREE.CatmullRomCurve3([
+					new THREE.Vector3(-0.2, -0.12, 0.52),
+					new THREE.Vector3(-0.05, -0.2, 0.57),
+					new THREE.Vector3(0.12, -0.13, 0.54),
+				]);
+				const mouth = new THREE.Mesh(
+					new THREE.TubeGeometry(mouthCurve, 10, 0.04, 6, false),
+					zombieScarMaterial,
+				);
+				group.add(mouth);
+
+				for (const side of [-1, 1]) {
+					const tendrilCurve = new THREE.CatmullRomCurve3([
+						new THREE.Vector3(side * 0.55, -0.15, 0),
+						new THREE.Vector3(side * 0.72, -0.3, 0.02),
+						new THREE.Vector3(side * 0.7, -0.52, 0.08),
+					]);
+					group.add(new THREE.Mesh(new THREE.TubeGeometry(tendrilCurve, 10, 0.065, 6, false), zombieTendrilMaterial));
+				}
+
+				const spawnPosition = new THREE.Vector3(x, 0, z);
+				group.position.copy(spawnPosition);
+				scene.add(group);
+				enemies.push({
+					group,
+					body,
+					baseColor,
+					spawnPosition,
+					health: 2,
+					speed: 0.56 + (index % 3) * 0.06,
+					attackReadyAt: 0,
+					flashUntil: 0,
+					phase: index * 1.7,
+					alive: true,
+				});
+			}
+
+			[
+				[-3.2, 9],
+				[3.4, 15],
+				[-2.2, 23],
+				[2.8, 31],
+			].forEach(([x, z], index) => createZombieSlime(x, z, index));
+
 			function resize() {
 				const width = window.innerWidth;
 				const height = window.innerHeight;
@@ -438,16 +1076,16 @@
 					cameraState.pitch = 0;
 				} else if (mode === 2) {
 					cameraState.yaw = slime.rotation.y + Math.PI;
-					cameraState.pitch = 0.2;
-					cameraState.distance = cameraState.baseDistance;
+					cameraState.pitch = activeBuilding ? 0.8 : 0.2;
+					cameraState.distance = activeBuilding ? Math.max(cameraState.baseDistance, 5.8) : cameraState.baseDistance;
 				} else if (mode === 3) {
 					cameraState.yaw = Math.PI / 4;
-					orthographicCamera.zoom = 0.68;
+					orthographicCamera.zoom = activeBuilding ? 0.68 : 0.34;
 					orthographicCamera.updateProjectionMatrix();
 				} else {
 					cameraState.yaw = Math.PI;
 					slime.rotation.y = Math.PI / 3;
-					orthographicCamera.zoom = 1;
+					orthographicCamera.zoom = activeBuilding ? 0.68 : 0.34;
 					orthographicCamera.updateProjectionMatrix();
 				}
 			}
@@ -456,8 +1094,76 @@
 				button.addEventListener("click", () => setCameraMode(Number(button.dataset.cameraMode)));
 			}
 
+			function setInventoryOpen(isOpen) {
+				inventoryPanel.hidden = !isOpen;
+				inventoryStatus.setAttribute("aria-expanded", String(isOpen));
+			}
+
+			function createInventoryItem(name) {
+				if (name === "bandage") return { name, kind: "medical", healing: 25 };
+				if (name === "médicaments") return { name, kind: "medical", healing: 40 };
+				if (name === "couteau de cuisine") return { name, kind: "weapon", damage: 2 };
+				return { name, kind: "supply" };
+			}
+
+			function renderInventory() {
+				inventoryItems.replaceChildren();
+				inventoryEmpty.hidden = inventory.length > 0;
+				inventoryStatus.textContent = `Inventaire · ${inventory.length}`;
+				for (const item of inventory) {
+					const row = document.createElement("li");
+					const name = document.createElement("span");
+					name.className = "inventory-item-name";
+					name.textContent = item.name;
+					row.append(name);
+
+					if (item.kind === "medical") {
+						const useButton = document.createElement("button");
+						useButton.className = "inventory-action";
+						useButton.type = "button";
+						useButton.textContent = playerHealth.current >= playerHealth.max ? "En forme" : `Soigner +${item.healing}`;
+						useButton.disabled = playerHealth.current >= playerHealth.max;
+						useButton.addEventListener("click", () => {
+							if (playerHealth.current >= playerHealth.max) return;
+						const previousHealth = playerHealth.current;
+						playerHealth.current = Math.min(playerHealth.max, playerHealth.current + item.healing);
+						inventory.splice(inventory.indexOf(item), 1);
+						updateHealthHud();
+						combatMessage = `Soins +${playerHealth.current - previousHealth}%`;
+						combatMessageUntil = performance.now() + 1200;
+						renderInventory();
+						});
+						row.append(useButton);
+					} else if (item.kind === "weapon") {
+						const equipButton = document.createElement("button");
+						equipButton.className = "inventory-action";
+						equipButton.type = "button";
+						equipButton.textContent = equippedWeapon === item ? "Équipé" : "Équiper";
+						equipButton.classList.toggle("is-equipped", equippedWeapon === item);
+						equipButton.addEventListener("click", () => {
+							equippedWeapon = equippedWeapon === item ? null : item;
+							renderInventory();
+						});
+						row.append(equipButton);
+					} else {
+						const category = document.createElement("span");
+						category.textContent = "Stock";
+						category.className = "inventory-item-name";
+						category.style.textAlign = "right";
+						row.append(category);
+					}
+
+					inventoryItems.append(row);
+				}
+			}
+
+			inventoryStatus.addEventListener("click", () => setInventoryOpen(inventoryPanel.hidden));
+			inventoryClose.addEventListener("click", () => setInventoryOpen(false));
+
 			function rotateCamera(deltaX, deltaY) {
-				if (cameraState.mode >= 3) return;
+				if (cameraState.mode >= 3) {
+					return;
+				}
 				cameraState.yaw -= deltaX * 0.0025;
 				const minPitch = cameraState.mode === 1 ? -0.65 : 0.03;
 				const maxPitch = cameraState.mode === 1 ? 0.65 : 0.78;
@@ -495,7 +1201,7 @@
 			canvas.addEventListener("pointercancel", () => { dragPointer = null; });
 			canvas.addEventListener("wheel", (event) => {
 				if (cameraState.mode >= 3) {
-					orthographicCamera.zoom = THREE.MathUtils.clamp(orthographicCamera.zoom * Math.exp(-event.deltaY * 0.001), 0.4, 2.5);
+					orthographicCamera.zoom = THREE.MathUtils.clamp(orthographicCamera.zoom * Math.exp(-event.deltaY * 0.001), 0.22, 2.5);
 					orthographicCamera.updateProjectionMatrix();
 				} else {
 					cameraState.distance = THREE.MathUtils.clamp(
@@ -504,11 +1210,35 @@
 						cameraState.baseDistance + 4,
 					);
 				}
-			}, { passive: true });
+				}, { passive: true });
 
 			const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"]);
 			const cameraModes = new Map([["Digit1", 1], ["Digit2", 2], ["Digit3", 3], ["Digit4", 4]]);
 			window.addEventListener("keydown", (event) => {
+				if (event.code === "KeyR" && gameOver) {
+					event.preventDefault();
+					restartSurvival();
+					return;
+				}
+				if (event.code === "Space") {
+					event.preventDefault();
+					if (!event.repeat) attackZombieSlime();
+					return;
+				}
+				if (event.code === "KeyE") {
+					event.preventDefault();
+					if (!event.repeat) interact();
+					return;
+				}
+				if (event.code === "KeyQ") {
+					event.preventDefault();
+					if (!event.repeat) exitBuilding();
+					return;
+				}
+				if (event.code === "Escape" && !inventoryPanel.hidden) {
+					setInventoryOpen(false);
+					return;
+				}
 				const selectedMode = cameraModes.get(event.code);
 				if (selectedMode) {
 					event.preventDefault();
@@ -522,7 +1252,32 @@
 			window.addEventListener("keyup", (event) => { pressedKeys.delete(event.code); });
 			window.addEventListener("blur", () => pressedKeys.clear());
 
+			function resolveHouseCollision(position, previousPosition, radius, excludedBuilding = null) {
+				for (const building of buildings) {
+					if (building === excludedBuilding) continue;
+					building.group.updateWorldMatrix(true, false);
+					const localPosition = building.group.worldToLocal(position.clone());
+					const previousLocalPosition = building.group.worldToLocal(previousPosition.clone());
+					const localRadius = radius / building.group.scale.x;
+					const halfWidth = 1.875 + localRadius;
+					const halfDepth = 1.775 + localRadius;
+					if (Math.abs(localPosition.x) >= halfWidth || Math.abs(localPosition.z) >= halfDepth) continue;
+
+					const enteredFromX = Math.abs(previousLocalPosition.x) >= halfWidth;
+					const enteredFromZ = Math.abs(previousLocalPosition.z) >= halfDepth;
+					const overlapX = halfWidth - Math.abs(localPosition.x);
+					const overlapZ = halfDepth - Math.abs(localPosition.z);
+					if ((enteredFromX && !enteredFromZ) || (!enteredFromX && !enteredFromZ && overlapX < overlapZ)) {
+						localPosition.x = Math.sign(previousLocalPosition.x || localPosition.x) * halfWidth;
+					} else {
+						localPosition.z = Math.sign(previousLocalPosition.z || localPosition.z) * halfDepth;
+					}
+					position.copy(building.group.localToWorld(localPosition));
+				}
+			}
+
 			function moveSlime(delta) {
+				if (gameOver) return;
 				const forward = Number(pressedKeys.has("KeyW") || pressedKeys.has("ArrowUp")) - Number(pressedKeys.has("KeyS") || pressedKeys.has("ArrowDown"));
 				const sideways = Number(pressedKeys.has("KeyD") || pressedKeys.has("ArrowRight")) - Number(pressedKeys.has("KeyA") || pressedKeys.has("ArrowLeft"));
 				desiredVelocity.set(0, 0, 0);
@@ -539,8 +1294,17 @@
 				desiredVelocity.multiplyScalar(2.4);
 				const smoothing = 1 - Math.exp(-(desiredVelocity.lengthSq() > 0 ? 9 : 6) * delta);
 				movementVelocity.lerp(desiredVelocity, smoothing);
+				const previousPosition = slime.position.clone();
 				slime.position.x += movementVelocity.x * delta;
 				slime.position.z += movementVelocity.z * delta;
+				if (activeBuilding) {
+					activeBuilding.group.updateWorldMatrix(true, false);
+					const localPosition = activeBuilding.group.worldToLocal(slime.position.clone());
+					localPosition.x = THREE.MathUtils.clamp(localPosition.x, -1.2, 1.2);
+					localPosition.z = THREE.MathUtils.clamp(localPosition.z, -1.15, 1.15);
+					slime.position.copy(activeBuilding.group.localToWorld(localPosition));
+				}
+				resolveHouseCollision(slime.position, previousPosition, 0.48, activeBuilding);
 
 				if (movementVelocity.lengthSq() > 0.0025) {
 					const targetRotation = cameraState.mode === 4
@@ -554,14 +1318,255 @@
 				}
 			}
 
+			function updateInteractionState() {
+				nearbyBuilding = null;
+				nearbyContainer = null;
+				nearbyContainerDistance = Infinity;
+
+				if (activeBuilding) {
+					for (const container of activeBuilding.containers) {
+						if (container.searched) continue;
+						const worldPosition = container.mesh.getWorldPosition(new THREE.Vector3());
+						const distance = Math.hypot(worldPosition.x - slime.position.x, worldPosition.z - slime.position.z);
+						if (distance < nearbyContainerDistance) {
+							nearbyContainer = container;
+							nearbyContainerDistance = distance;
+						}
+					}
+
+					interactionHint.textContent = nearbyContainer && nearbyContainerDistance <= 2.2
+						? `E · Fouiller le ${nearbyContainer.label}  |  Q · Sortir`
+						: "Q · Sortir de la maison";
+					return;
+				}
+
+				let closestDistance = Infinity;
+				for (const building of buildings) {
+					const doorPosition = building.group.localToWorld(building.doorPosition.clone());
+					const distance = Math.hypot(doorPosition.x - slime.position.x, doorPosition.z - slime.position.z);
+					if (distance < closestDistance) {
+						nearbyBuilding = building;
+						closestDistance = distance;
+					}
+				}
+				interactionHint.textContent = nearbyBuilding && closestDistance <= 2.35
+					? "E · Entrer dans la maison"
+					: "";
+			}
+
+			function enterBuilding(building) {
+				activeBuilding = building;
+				building.exterior.visible = false;
+				building.interior.visible = true;
+				ground.visible = false;
+				groundGrid.visible = false;
+				for (const townObject of town.children) townObject.visible = townObject === building.group;
+				for (const marker of worldMarkers) marker.visible = false;
+				for (const enemy of enemies) enemy.group.visible = false;
+				scene.background = new THREE.Color(0x38342e);
+				building.group.updateWorldMatrix(true, false);
+				slime.position.copy(building.group.localToWorld(new THREE.Vector3(0, 0.95, 0.28)));
+				slime.rotation.y = building.group.rotation.y;
+				slime.scale.setScalar(slimeWorldScale * 0.72);
+				cameraState.yaw = slime.rotation.y + Math.PI;
+				cameraState.pitch = 0.8;
+				cameraState.distance = Math.max(cameraState.baseDistance, 5.8);
+				if (cameraState.mode >= 3) {
+					orthographicCamera.zoom = 0.68;
+					orthographicCamera.updateProjectionMatrix();
+				}
+				movementVelocity.set(0, 0, 0);
+				lootNotice.textContent = "";
+			}
+
+			function exitBuilding() {
+				if (!activeBuilding) return;
+				const building = activeBuilding;
+				building.group.updateWorldMatrix(true, false);
+				slime.position.copy(building.group.localToWorld(new THREE.Vector3(0, 0.95, 2.15)));
+				building.exterior.visible = true;
+				building.interior.visible = false;
+				activeBuilding = null;
+				ground.visible = true;
+				groundGrid.visible = true;
+				for (const townObject of town.children) townObject.visible = true;
+				for (const marker of worldMarkers) marker.visible = true;
+				for (const enemy of enemies) enemy.group.visible = enemy.alive;
+				scene.background = null;
+				slime.scale.setScalar(slimeWorldScale);
+				movementVelocity.set(0, 0, 0);
+				cameraState.yaw = slime.rotation.y + Math.PI;
+				cameraState.pitch = 0.2;
+				cameraState.distance = cameraState.baseDistance;
+				if (cameraState.mode >= 3) {
+					orthographicCamera.zoom = 0.34;
+					orthographicCamera.updateProjectionMatrix();
+				}
+			}
+
+			function interact() {
+				updateInteractionState();
+				if (activeBuilding) {
+					if (nearbyContainer && nearbyContainerDistance <= 2.2) {
+						nearbyContainer.searched = true;
+						inventory.push(createInventoryItem(nearbyContainer.loot));
+						renderInventory();
+						nearbyContainer.mesh.material = new THREE.MeshStandardMaterial({ color: 0x77766b, roughness: 0.95 });
+						lootNotice.textContent = `Trouvé : ${nearbyContainer.loot}`;
+						lootNoticeUntil = performance.now() + 2600;
+					} else {
+						exitBuilding();
+					}
+					return;
+				}
+
+				if (nearbyBuilding) {
+					const doorPosition = nearbyBuilding.group.localToWorld(nearbyBuilding.doorPosition.clone());
+					if (Math.hypot(doorPosition.x - slime.position.x, doorPosition.z - slime.position.z) <= 2.35) {
+						enterBuilding(nearbyBuilding);
+					}
+				}
+			}
+
+			function updateHealthHud() {
+				const percentage = Math.round((playerHealth.current / playerHealth.max) * 100);
+				healthFill.style.width = `${percentage}%`;
+				healthValue.textContent = `${percentage}%`;
+				healthMeter.setAttribute("aria-valuenow", String(percentage));
+				healthHud.classList.toggle("is-low", percentage <= 30);
+				healthStateLabel.textContent = percentage <= 0
+					? "À terre"
+					: percentage <= 30
+						? "Critique"
+						: percentage <= 60
+							? "Blessé"
+							: "En forme";
+			}
+
+			function damagePlayer(amount, now) {
+				if (gameOver) return;
+				playerHealth.current = Math.max(0, playerHealth.current - amount);
+				updateHealthHud();
+				if (playerHealth.current === 0) {
+					gameOver = true;
+					movementVelocity.set(0, 0, 0);
+					combatMessage = "À terre · R pour recommencer";
+					combatMessageUntil = now + 100000;
+				} else {
+					combatMessage = `Touché · ${playerHealth.current}%`;
+					combatMessageUntil = now + 900;
+				}
+			}
+
+			function updateEnemies(delta, time) {
+				const now = performance.now();
+				let nearestDistance = Infinity;
+
+				for (const enemy of enemies) {
+					if (!enemy.alive) continue;
+					const offsetX = slime.position.x - enemy.group.position.x;
+					const offsetZ = slime.position.z - enemy.group.position.z;
+					let distance = Math.hypot(offsetX, offsetZ);
+
+					if (!gameOver && !activeBuilding && distance < 24 && distance > 1.15) {
+						const previousPosition = enemy.group.position.clone();
+						enemy.group.position.x += (offsetX / distance) * enemy.speed * delta;
+						enemy.group.position.z += (offsetZ / distance) * enemy.speed * delta;
+						resolveHouseCollision(enemy.group.position, previousPosition, 0.42);
+						enemy.group.rotation.y = Math.atan2(offsetX, offsetZ);
+						distance = Math.hypot(slime.position.x - enemy.group.position.x, slime.position.z - enemy.group.position.z);
+					}
+
+					enemy.group.position.y = Math.sin(time * 2.4 + enemy.phase) * 0.035;
+					if (now >= enemy.flashUntil) enemy.body.material.color.setHex(enemy.baseColor);
+					nearestDistance = Math.min(nearestDistance, distance);
+
+					if (!activeBuilding && distance <= 1.25 && now >= enemy.attackReadyAt) {
+						enemy.attackReadyAt = now + 1700;
+						damagePlayer(7, now);
+					}
+				}
+
+				if (gameOver) {
+					combatHint.textContent = "À terre · R pour recommencer";
+				} else if (now < combatMessageUntil) {
+					combatHint.textContent = combatMessage;
+				} else {
+					combatHint.textContent = nearestDistance <= 3.4 ? "ESPACE · Attaquer le slime zombie" : "";
+				}
+			}
+
+			function attackZombieSlime() {
+			if (gameOver) return;
+			const now = performance.now();
+			if (now < nextAttackAt) return;
+					nextAttackAt = now + 360;
+
+			let target = null;
+			let targetDistance = Infinity;
+			for (const enemy of enemies) {
+				if (!enemy.alive) continue;
+				const distance = Math.hypot(slime.position.x - enemy.group.position.x, slime.position.z - enemy.group.position.z);
+				if (distance < targetDistance) {
+					target = enemy;
+					targetDistance = distance;
+				}
+			}
+
+					if (!target || targetDistance > 3.2) {
+				combatMessage = "Aucun ennemi à portée";
+				combatMessageUntil = now + 650;
+				return;
+			}
+
+				target.health -= equippedWeapon ? equippedWeapon.damage : 1;
+			target.body.material.color.setHex(0xb55249);
+			target.flashUntil = now + 180;
+			if (target.health <= 0) {
+				target.alive = false;
+				scene.remove(target.group);
+				combatMessage = "Slime zombie neutralisé";
+			} else {
+				combatMessage = "Touché · encore un coup";
+			}
+			combatMessageUntil = now + 900;
+			}
+
+			function restartSurvival() {
+				if (activeBuilding) exitBuilding();
+				gameOver = false;
+				playerHealth.current = playerHealth.max;
+				slime.position.copy(playerStartPosition);
+				slime.scale.setScalar(slimeWorldScale);
+				movementVelocity.set(0, 0, 0);
+				cameraState.yaw = Math.PI;
+				cameraState.pitch = 0.2;
+				cameraState.distance = cameraState.baseDistance;
+				for (const enemy of enemies) {
+					enemy.alive = true;
+					enemy.health = 2;
+					enemy.attackReadyAt = 0;
+					enemy.group.position.copy(enemy.spawnPosition);
+					enemy.body.material.color.setHex(enemy.baseColor);
+					if (!enemy.group.parent) scene.add(enemy.group);
+				}
+				combatMessage = "";
+				combatMessageUntil = 0;
+				updateHealthHud();
+			}
+
 			const timer = new THREE.Timer();
 			timer.connect(document);
 			function animate(timestamp) {
 				timer.update(timestamp);
 				const time = timer.getElapsed();
-				moveSlime(Math.min(timer.getDelta(), 0.05));
+				const delta = Math.min(timer.getDelta(), 0.05);
+				moveSlime(delta);
+				updateEnemies(delta, time);
+				updateInteractionState();
+				if (performance.now() > lootNoticeUntil) lootNotice.textContent = "";
 				slime.position.y = Math.sin(time * 1.7) * 0.055;
-				slime.scale.y = 1 + Math.sin(time * 1.7 + 0.6) * 0.018;
+				slime.scale.y = slimeWorldScale * (activeBuilding ? 0.72 : 1) * (1 + Math.sin(time * 1.7 + 0.6) * 0.018);
 				slime.rotation.z = Math.sin(time * 0.8) * 0.025;
 				for (const arm of armPivots) {
 					arm.group.rotation.z = arm.side * (0.08 + Math.sin(time * 2 + arm.side) * 0.07);
@@ -571,24 +1576,56 @@
 				if (cameraState.mode === 1) {
 					fpsCamera.rotation.set(-cameraState.pitch, cameraState.yaw - slime.rotation.y, 0, "YXZ");
 				} else if (cameraState.mode === 2) {
-					const horizontalDistance = cameraState.distance * Math.cos(cameraState.pitch);
-					camera.position.set(
-						slime.position.x + Math.sin(cameraState.yaw) * horizontalDistance + Math.cos(cameraState.yaw) * 0.42,
-						slime.position.y + 0.9 + Math.sin(cameraState.pitch) * cameraState.distance,
-						slime.position.z + Math.cos(cameraState.yaw) * horizontalDistance - Math.sin(cameraState.yaw) * 0.42,
-					);
-					camera.lookAt(
-						slime.position.x + forwardX * 1.05,
-						slime.position.y + 0.82,
-						slime.position.z + forwardZ * 1.05,
-					);
+					if (activeBuilding) {
+						const localPlayer = activeBuilding.group.worldToLocal(slime.position.clone());
+						const localYaw = cameraState.yaw - activeBuilding.group.rotation.y;
+						const cameraLocal = new THREE.Vector3(
+							THREE.MathUtils.clamp(localPlayer.x + Math.sin(localYaw) * 1.25, -1.3, 1.3),
+							2.35,
+							THREE.MathUtils.clamp(localPlayer.z + Math.cos(localYaw) * 1.25, -1.3, 1.3),
+						);
+						camera.position.copy(activeBuilding.group.localToWorld(cameraLocal));
+						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, 0.5, localPlayer.z)));
+					} else {
+						const horizontalDistance = cameraState.distance * Math.cos(cameraState.pitch);
+						camera.position.set(
+							slime.position.x + Math.sin(cameraState.yaw) * horizontalDistance + Math.cos(cameraState.yaw) * 0.42,
+							slime.position.y + 0.9 + Math.sin(cameraState.pitch) * cameraState.distance,
+							slime.position.z + Math.cos(cameraState.yaw) * horizontalDistance - Math.sin(cameraState.yaw) * 0.42,
+						);
+						camera.lookAt(
+							slime.position.x + forwardX * 1.05,
+							slime.position.y + 0.82,
+							slime.position.z + forwardZ * 1.05,
+						);
+					}
 				} else if (cameraState.mode === 3) {
-					const offset = 11 / Math.sqrt(3);
-					camera.position.set(slime.position.x + offset, slime.position.y + offset, slime.position.z + offset);
-					camera.lookAt(slime.position.x, slime.position.y + 0.15, slime.position.z);
+					if (activeBuilding) {
+						const localPlayer = activeBuilding.group.worldToLocal(slime.position.clone());
+						camera.position.copy(activeBuilding.group.localToWorld(new THREE.Vector3(
+							THREE.MathUtils.clamp(localPlayer.x + 0.95, -1.3, 1.3),
+							5.5,
+							THREE.MathUtils.clamp(localPlayer.z + 0.95, -1.3, 1.3),
+						)));
+						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, 0.45, localPlayer.z)));
+					} else {
+						const offset = 11 / Math.sqrt(3);
+						camera.position.set(slime.position.x + offset, slime.position.y + offset, slime.position.z + offset);
+						camera.lookAt(slime.position.x, slime.position.y + 0.15, slime.position.z);
+					}
 				} else {
-					camera.position.set(slime.position.x, slime.position.y + 1.25, slime.position.z + 8);
-					camera.lookAt(slime.position.x, slime.position.y + 0.05, slime.position.z);
+					if (activeBuilding) {
+						const localPlayer = activeBuilding.group.worldToLocal(slime.position.clone());
+						camera.position.copy(activeBuilding.group.localToWorld(new THREE.Vector3(
+							localPlayer.x,
+							1.75,
+							THREE.MathUtils.clamp(localPlayer.z + 1.2, -1.3, 1.3),
+						)));
+						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, 0.35, localPlayer.z)));
+					} else {
+						camera.position.set(slime.position.x, slime.position.y + 1.25, slime.position.z + 8);
+						camera.lookAt(slime.position.x, slime.position.y + 0.05, slime.position.z);
+					}
 				}
 				renderer.render(scene, camera);
 				requestAnimationFrame(animate);
