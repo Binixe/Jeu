@@ -78,6 +78,69 @@
 				transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 			}
 
+			.camera-modes {
+				position: absolute;
+				z-index: 2;
+				top: 18px;
+				left: 18px;
+				display: grid;
+				grid-template-columns: repeat(4, minmax(0, 1fr));
+				width: min(390px, calc(100vw - 88px));
+				padding: 4px;
+				border: 1px solid rgba(47, 92, 75, 0.18);
+				border-radius: 9px;
+				background: rgba(248, 255, 248, 0.78);
+				backdrop-filter: blur(8px);
+			}
+
+			.camera-mode-option {
+				display: grid;
+				min-width: 0;
+				min-height: 38px;
+				place-content: center;
+				gap: 2px;
+				border: 0;
+				border-radius: 6px;
+				background: transparent;
+				color: #466c5a;
+				cursor: pointer;
+				font: inherit;
+				transition: background 150ms ease, color 150ms ease;
+			}
+
+			.camera-mode-option:hover {
+				background: rgba(49, 93, 76, 0.1);
+			}
+
+			.camera-mode-option[aria-pressed="true"] {
+				background: #315d4c;
+				color: #f5fff3;
+			}
+
+			.camera-mode-key {
+				font-size: 9px;
+				font-weight: 700;
+				line-height: 1;
+				opacity: 0.76;
+			}
+
+			.camera-mode-name {
+				font-size: 11px;
+				font-weight: 700;
+				line-height: 1.15;
+				color: #315d4c;
+			}
+
+			.camera-mode-option[aria-pressed="true"] .camera-mode-name {
+				color: inherit;
+			}
+
+			.camera-mode-option:focus-visible,
+			.camera-control:focus-visible {
+				outline: 2px solid #e08b68;
+				outline-offset: 2px;
+			}
+
 			.camera-control:hover {
 				transform: scale(1.06);
 			}
@@ -130,6 +193,18 @@
 			}
 
 			@media (max-width: 600px) {
+				.camera-modes {
+					top: auto;
+					right: 14px;
+					bottom: 16px;
+					left: 14px;
+					width: auto;
+				}
+
+				.camera-mode-option {
+					min-height: 42px;
+				}
+
 				.camera-control {
 					top: 16px;
 					right: 16px;
@@ -141,6 +216,20 @@
 		<main aria-label="Jeu en vue troisième personne">
 			<canvas id="scene"></canvas>
 			<div class="aim-reticle" aria-hidden="true"></div>
+			<div class="camera-modes" role="group" aria-label="Angle de caméra">
+				<button class="camera-mode-option" type="button" data-camera-mode="1" aria-pressed="false" title="Vue première personne">
+					<span class="camera-mode-key">1</span><span class="camera-mode-name">FPS</span>
+				</button>
+				<button class="camera-mode-option" type="button" data-camera-mode="2" aria-pressed="true" title="Vue troisième personne">
+					<span class="camera-mode-key">2</span><span class="camera-mode-name">TPS</span>
+				</button>
+				<button class="camera-mode-option" type="button" data-camera-mode="3" aria-pressed="false" title="Vue isométrique">
+					<span class="camera-mode-key">3</span><span class="camera-mode-name">ISO</span>
+				</button>
+				<button class="camera-mode-option" type="button" data-camera-mode="4" aria-pressed="false" title="Vue défilement latéral">
+					<span class="camera-mode-key">4</span><span class="camera-mode-name">LAT</span>
+				</button>
+			</div>
 			<button class="camera-control" id="camera-control" type="button" title="Activer le contrôle de la souris" aria-label="Activer le contrôle de la souris">
 				<span aria-hidden="true"></span>
 			</button>
@@ -150,10 +239,17 @@
 
 			const canvas = document.querySelector("#scene");
 			const scene = new THREE.Scene();
-			const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
+			const fpsCamera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
+			const perspectiveCamera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
+			const orthographicCamera = new THREE.OrthographicCamera(-2, 2, 2, -2, 0.1, 100);
+			let camera = perspectiveCamera;
 			const cameraControl = document.querySelector("#camera-control");
-			const cameraState = { yaw: Math.PI, pitch: 0.2, distance: 5.2, baseDistance: 5.2 };
+			const cameraModeButtons = [...document.querySelectorAll("[data-camera-mode]")];
+			const aimReticle = document.querySelector(".aim-reticle");
+			const cameraState = { mode: 2, yaw: Math.PI, pitch: 0.2, distance: 5.2, baseDistance: 5.2 };
 			const pressedKeys = new Set();
+			const movementVelocity = new THREE.Vector3();
+			const desiredVelocity = new THREE.Vector3();
 			let dragPointer = null;
 
 			const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
@@ -172,8 +268,45 @@
 			rimLight.position.set(4, 1, -3);
 			scene.add(rimLight);
 
+			const ground = new THREE.Mesh(
+				new THREE.PlaneGeometry(120, 120),
+				new THREE.MeshBasicMaterial({ color: 0x9fc9b1, transparent: true, opacity: 0.14, depthWrite: false }),
+			);
+			ground.rotation.x = -Math.PI / 2;
+			ground.position.y = -1.14;
+			scene.add(ground);
+
+			const groundGrid = new THREE.GridHelper(120, 60, 0x6f9c84, 0x88af99);
+			groundGrid.position.y = -1.13;
+			for (const material of Array.isArray(groundGrid.material) ? groundGrid.material : [groundGrid.material]) {
+				material.transparent = true;
+				material.opacity = 0.16;
+				material.depthWrite = false;
+			}
+			scene.add(groundGrid);
+
+			const markerRingMaterial = new THREE.MeshStandardMaterial({ color: 0xe59a75, emissive: 0x5d2917, emissiveIntensity: 0.12, roughness: 0.42 });
+			const markerCoreMaterial = new THREE.MeshStandardMaterial({ color: 0xf3dc9f, emissive: 0x624b1d, emissiveIntensity: 0.1, roughness: 0.38 });
+			function addAimMarker(x, y, z, scale) {
+				const marker = new THREE.Group();
+				marker.position.set(x, y, z);
+				marker.scale.setScalar(scale);
+				const ring = new THREE.Mesh(new THREE.TorusGeometry(0.48, 0.055, 12, 32), markerRingMaterial);
+				marker.add(ring);
+				const core = new THREE.Mesh(new THREE.SphereGeometry(0.12, 24, 18), markerCoreMaterial);
+				marker.add(core);
+				scene.add(marker);
+			}
+
+			addAimMarker(0, 0.3, 8, 1);
+			addAimMarker(-3.2, 0.55, 12, 0.8);
+			addAimMarker(3.4, 0.4, 15, 1.1);
+
 			const slime = new THREE.Group();
 			scene.add(slime);
+			fpsCamera.position.set(0, 0.18, 0);
+			fpsCamera.rotation.order = "YXZ";
+			slime.add(fpsCamera);
 
 			const bodyMaterial = new THREE.MeshPhysicalMaterial({
 				color: 0x8cdb77,
@@ -268,20 +401,67 @@
 			function resize() {
 				const width = window.innerWidth;
 				const height = window.innerHeight;
-				camera.aspect = width / height;
-				const horizontalSpace = 3.8 / (2 * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) * camera.aspect);
-				cameraState.baseDistance = Math.max(4.8, horizontalSpace);
+				const aspect = width / height;
+				fpsCamera.aspect = aspect;
+				perspectiveCamera.aspect = aspect;
+				const horizontalSpace = 3.8 / (2 * Math.tan(THREE.MathUtils.degToRad(perspectiveCamera.fov / 2)) * aspect);
+				cameraState.baseDistance = Math.max(5.8, horizontalSpace);
 				cameraState.distance = cameraState.baseDistance;
-				camera.updateProjectionMatrix();
+				fpsCamera.updateProjectionMatrix();
+				perspectiveCamera.updateProjectionMatrix();
+				const frustumHeight = Math.max(3.2, 3.8 / aspect);
+				orthographicCamera.left = -frustumHeight * aspect / 2;
+				orthographicCamera.right = frustumHeight * aspect / 2;
+				orthographicCamera.top = frustumHeight / 2;
+				orthographicCamera.bottom = -frustumHeight / 2;
+				orthographicCamera.updateProjectionMatrix();
 				renderer.setSize(width, height, false);
 			}
 
 			window.addEventListener("resize", resize);
 			resize();
 
+			function setCameraMode(mode) {
+				cameraState.mode = mode;
+				camera = mode === 1 ? fpsCamera : mode >= 3 ? orthographicCamera : perspectiveCamera;
+				body.visible = mode !== 1;
+				face.visible = mode !== 1;
+				for (const arm of armPivots) arm.group.visible = mode !== 1;
+				shadow.visible = mode !== 1;
+				for (const button of cameraModeButtons) {
+					button.setAttribute("aria-pressed", String(Number(button.dataset.cameraMode) === mode));
+				}
+				aimReticle.hidden = mode >= 3;
+
+				if (mode === 1) {
+					cameraState.yaw = slime.rotation.y + Math.PI;
+					cameraState.pitch = 0;
+				} else if (mode === 2) {
+					cameraState.yaw = slime.rotation.y + Math.PI;
+					cameraState.pitch = 0.2;
+					cameraState.distance = cameraState.baseDistance;
+				} else if (mode === 3) {
+					cameraState.yaw = Math.PI / 4;
+					orthographicCamera.zoom = 0.68;
+					orthographicCamera.updateProjectionMatrix();
+				} else {
+					cameraState.yaw = Math.PI;
+					slime.rotation.y = Math.PI / 3;
+					orthographicCamera.zoom = 1;
+					orthographicCamera.updateProjectionMatrix();
+				}
+			}
+
+			for (const button of cameraModeButtons) {
+				button.addEventListener("click", () => setCameraMode(Number(button.dataset.cameraMode)));
+			}
+
 			function rotateCamera(deltaX, deltaY) {
+				if (cameraState.mode >= 3) return;
 				cameraState.yaw -= deltaX * 0.0025;
-				cameraState.pitch = THREE.MathUtils.clamp(cameraState.pitch + deltaY * 0.002, 0.03, 0.78);
+				const minPitch = cameraState.mode === 1 ? -0.65 : 0.03;
+				const maxPitch = cameraState.mode === 1 ? 0.65 : 0.78;
+				cameraState.pitch = THREE.MathUtils.clamp(cameraState.pitch + deltaY * 0.002, minPitch, maxPitch);
 			}
 
 			function requestMouseLock() {
@@ -314,15 +494,27 @@
 			canvas.addEventListener("pointerup", () => { dragPointer = null; });
 			canvas.addEventListener("pointercancel", () => { dragPointer = null; });
 			canvas.addEventListener("wheel", (event) => {
-				cameraState.distance = THREE.MathUtils.clamp(
-					cameraState.distance + event.deltaY * 0.008,
-					cameraState.baseDistance * 0.82,
-					cameraState.baseDistance + 4,
-				);
+				if (cameraState.mode >= 3) {
+					orthographicCamera.zoom = THREE.MathUtils.clamp(orthographicCamera.zoom * Math.exp(-event.deltaY * 0.001), 0.4, 2.5);
+					orthographicCamera.updateProjectionMatrix();
+				} else {
+					cameraState.distance = THREE.MathUtils.clamp(
+						cameraState.distance + event.deltaY * 0.008,
+						cameraState.baseDistance * 0.82,
+						cameraState.baseDistance + 4,
+					);
+				}
 			}, { passive: true });
 
 			const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"]);
+			const cameraModes = new Map([["Digit1", 1], ["Digit2", 2], ["Digit3", 3], ["Digit4", 4]]);
 			window.addEventListener("keydown", (event) => {
+				const selectedMode = cameraModes.get(event.code);
+				if (selectedMode) {
+					event.preventDefault();
+					if (!event.repeat) setCameraMode(selectedMode);
+					return;
+				}
 				if (!movementKeys.has(event.code)) return;
 				event.preventDefault();
 				pressedKeys.add(event.code);
@@ -333,16 +525,33 @@
 			function moveSlime(delta) {
 				const forward = Number(pressedKeys.has("KeyW") || pressedKeys.has("ArrowUp")) - Number(pressedKeys.has("KeyS") || pressedKeys.has("ArrowDown"));
 				const sideways = Number(pressedKeys.has("KeyD") || pressedKeys.has("ArrowRight")) - Number(pressedKeys.has("KeyA") || pressedKeys.has("ArrowLeft"));
-				if (forward === 0 && sideways === 0) return;
+				desiredVelocity.set(0, 0, 0);
+				if (cameraState.mode === 4) {
+					desiredVelocity.x = sideways;
+				} else {
+					const forwardX = -Math.sin(cameraState.yaw);
+					const forwardZ = -Math.cos(cameraState.yaw);
+					desiredVelocity.x = forwardX * forward + Math.cos(cameraState.yaw) * sideways;
+					desiredVelocity.z = forwardZ * forward - Math.sin(cameraState.yaw) * sideways;
+				}
 
-				const forwardX = -Math.sin(cameraState.yaw);
-				const forwardZ = -Math.cos(cameraState.yaw);
-				const moveX = forwardX * forward + Math.cos(cameraState.yaw) * sideways;
-				const moveZ = forwardZ * forward - Math.sin(cameraState.yaw) * sideways;
-				const length = Math.hypot(moveX, moveZ);
-				slime.position.x += (moveX / length) * delta * 2.4;
-				slime.position.z += (moveZ / length) * delta * 2.4;
-				slime.rotation.y = Math.atan2(moveX, moveZ);
+				if (desiredVelocity.lengthSq() > 1) desiredVelocity.normalize();
+				desiredVelocity.multiplyScalar(2.4);
+				const smoothing = 1 - Math.exp(-(desiredVelocity.lengthSq() > 0 ? 9 : 6) * delta);
+				movementVelocity.lerp(desiredVelocity, smoothing);
+				slime.position.x += movementVelocity.x * delta;
+				slime.position.z += movementVelocity.z * delta;
+
+				if (movementVelocity.lengthSq() > 0.0025) {
+					const targetRotation = cameraState.mode === 4
+						? (movementVelocity.x > 0 ? Math.PI / 3 : -Math.PI / 3)
+						: Math.atan2(movementVelocity.x, movementVelocity.z);
+					const rotationDelta = Math.atan2(
+						Math.sin(targetRotation - slime.rotation.y),
+						Math.cos(targetRotation - slime.rotation.y),
+					);
+					slime.rotation.y += rotationDelta * (1 - Math.exp(-12 * delta));
+				}
 			}
 
 			const timer = new THREE.Timer();
@@ -354,21 +563,33 @@
 				slime.position.y = Math.sin(time * 1.7) * 0.055;
 				slime.scale.y = 1 + Math.sin(time * 1.7 + 0.6) * 0.018;
 				slime.rotation.z = Math.sin(time * 0.8) * 0.025;
-				face.rotation.y = cameraState.yaw - slime.rotation.y;
 				for (const arm of armPivots) {
 					arm.group.rotation.z = arm.side * (0.08 + Math.sin(time * 2 + arm.side) * 0.07);
 				}
-				const horizontalDistance = cameraState.distance * Math.cos(cameraState.pitch);
-				camera.position.set(
-					slime.position.x + Math.sin(cameraState.yaw) * horizontalDistance + Math.cos(cameraState.yaw) * 0.42,
-					slime.position.y + 0.9 + Math.sin(cameraState.pitch) * cameraState.distance,
-					slime.position.z + Math.cos(cameraState.yaw) * horizontalDistance - Math.sin(cameraState.yaw) * 0.42,
-				);
-				camera.lookAt(
-					slime.position.x - Math.sin(cameraState.yaw) * 0.85,
-					slime.position.y + 0.52,
-					slime.position.z - Math.cos(cameraState.yaw) * 0.85,
-				);
+				const forwardX = -Math.sin(cameraState.yaw);
+				const forwardZ = -Math.cos(cameraState.yaw);
+				if (cameraState.mode === 1) {
+					fpsCamera.rotation.set(-cameraState.pitch, cameraState.yaw - slime.rotation.y, 0, "YXZ");
+				} else if (cameraState.mode === 2) {
+					const horizontalDistance = cameraState.distance * Math.cos(cameraState.pitch);
+					camera.position.set(
+						slime.position.x + Math.sin(cameraState.yaw) * horizontalDistance + Math.cos(cameraState.yaw) * 0.42,
+						slime.position.y + 0.9 + Math.sin(cameraState.pitch) * cameraState.distance,
+						slime.position.z + Math.cos(cameraState.yaw) * horizontalDistance - Math.sin(cameraState.yaw) * 0.42,
+					);
+					camera.lookAt(
+						slime.position.x + forwardX * 1.05,
+						slime.position.y + 0.82,
+						slime.position.z + forwardZ * 1.05,
+					);
+				} else if (cameraState.mode === 3) {
+					const offset = 11 / Math.sqrt(3);
+					camera.position.set(slime.position.x + offset, slime.position.y + offset, slime.position.z + offset);
+					camera.lookAt(slime.position.x, slime.position.y + 0.15, slime.position.z);
+				} else {
+					camera.position.set(slime.position.x, slime.position.y + 1.25, slime.position.z + 8);
+					camera.lookAt(slime.position.x, slime.position.y + 0.05, slime.position.z);
+				}
 				renderer.render(scene, camera);
 				requestAnimationFrame(animate);
 			}
