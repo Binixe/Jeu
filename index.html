@@ -78,6 +78,10 @@
 				transition: background 160ms ease, color 160ms ease, transform 160ms ease;
 			}
 
+			.camera-control[hidden] {
+				display: none;
+			}
+
 			.camera-modes {
 				position: absolute;
 				z-index: 2;
@@ -427,6 +431,90 @@
 				font-weight: 700;
 			}
 
+			.start-screen {
+				position: fixed;
+				z-index: 20;
+				inset: 0;
+				display: grid;
+				place-items: center;
+				padding: 24px;
+				background:
+					radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.18), transparent 24%),
+					rgba(29, 57, 47, 0.42);
+				backdrop-filter: blur(10px);
+				transition: opacity 280ms ease, visibility 280ms ease;
+			}
+
+			.start-screen[hidden] {
+				display: none;
+			}
+
+			.start-card {
+				width: min(520px, 100%);
+				padding: clamp(28px, 6vw, 48px);
+				border: 1px solid rgba(255, 255, 255, 0.58);
+				border-radius: 18px;
+				background: rgba(248, 255, 248, 0.94);
+				box-shadow: 0 24px 70px rgba(23, 55, 43, 0.28);
+				color: #315d4c;
+				text-align: center;
+			}
+
+			.start-kicker {
+				margin: 0 0 8px;
+				color: #789183;
+				font-size: 12px;
+				font-weight: 800;
+				letter-spacing: 0.18em;
+				text-transform: uppercase;
+			}
+
+			.start-card h1 {
+				margin: 0;
+				font-size: clamp(42px, 10vw, 72px);
+				line-height: 0.95;
+				letter-spacing: -0.06em;
+			}
+
+			.start-subtitle {
+				max-width: 380px;
+				margin: 18px auto 24px;
+				color: #648071;
+				font-size: 15px;
+				line-height: 1.6;
+			}
+
+			.start-button {
+				min-width: 210px;
+				padding: 14px 20px;
+				border: 0;
+				border-radius: 9px;
+				background: #315d4c;
+				box-shadow: 0 8px 20px rgba(49, 93, 76, 0.22);
+				color: #f5fff3;
+				cursor: pointer;
+				font: inherit;
+				font-size: 15px;
+				font-weight: 800;
+				transition: transform 160ms ease, background 160ms ease;
+			}
+
+			.start-button:hover {
+				background: #3f725f;
+				transform: translateY(-2px);
+			}
+
+			.start-button:focus-visible {
+				outline: 3px solid #e08b68;
+				outline-offset: 4px;
+			}
+
+			.start-controls {
+				margin: 16px 0 0;
+				color: #789183;
+				font-size: 11px;
+			}
+
 			@media (max-width: 600px) {
 				.camera-modes {
 					top: auto;
@@ -481,6 +569,15 @@
 	</head>
 	<body>
 		<main aria-label="Jeu en vue troisième personne">
+			<section class="start-screen" id="start-screen" aria-labelledby="game-title">
+				<div class="start-card">
+					<p class="start-kicker">Une aventure miniature</p>
+					<h1 id="game-title">Petit Slime</h1>
+					<p class="start-subtitle">Explore la ville, entre dans les maisons, collecte des objets et défends-toi contre les slimes zombies.</p>
+					<button class="start-button" id="start-button" type="button">Entrer dans le jeu</button>
+					<p class="start-controls">ZQSD / flèches pour bouger · E pour interagir · Espace pour attaquer</p>
+				</div>
+			</section>
 			<canvas id="scene"></canvas>
 			<div class="aim-reticle" aria-hidden="true"></div>
 			<div class="camera-modes" role="group" aria-label="Angle de caméra">
@@ -545,8 +642,11 @@
 			const healthValue = document.querySelector("#health-value");
 			const healthStateLabel = document.querySelector("#health-state");
 			const combatHint = document.querySelector("#combat-hint");
+			const startScreen = document.querySelector("#start-screen");
+			const startButton = document.querySelector("#start-button");
 			const cameraState = { mode: 2, yaw: Math.PI, pitch: 0.2, distance: 5.2, baseDistance: 5.2 };
 			const pressedKeys = new Set();
+			let gameStarted = false;
 			const inventory = [];
 			let equippedWeapon = null;
 			const enemies = [];
@@ -554,6 +654,7 @@
 			const movementVelocity = new THREE.Vector3();
 			const desiredVelocity = new THREE.Vector3();
 			const playerStartPosition = new THREE.Vector3(0, 0, 0);
+			let attackAnimationStartedAt = -Infinity;
 			let activeBuilding = null;
 			let nearbyBuilding = null;
 			let nearbyContainer = null;
@@ -564,6 +665,15 @@
 			let nextAttackAt = 0;
 			let gameOver = false;
 			let dragPointer = null;
+
+			function startGame() {
+				if (gameStarted) return;
+				gameStarted = true;
+				startScreen.hidden = true;
+				canvas.focus();
+			}
+
+			startButton.addEventListener("click", startGame);
 
 			const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
 			renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -582,14 +692,14 @@
 			scene.add(rimLight);
 
 			const ground = new THREE.Mesh(
-				new THREE.PlaneGeometry(120, 120),
+				new THREE.PlaneGeometry(180, 180),
 				new THREE.MeshBasicMaterial({ color: 0x9fc9b1, transparent: true, opacity: 0.14, depthWrite: false }),
 			);
 			ground.rotation.x = -Math.PI / 2;
 			ground.position.y = -1.14;
 			scene.add(ground);
 
-			const groundGrid = new THREE.GridHelper(120, 60, 0x6f9c84, 0x88af99);
+			const groundGrid = new THREE.GridHelper(180, 90, 0x6f9c84, 0x88af99);
 			groundGrid.position.y = -1.13;
 			for (const material of Array.isArray(groundGrid.material) ? groundGrid.material : [groundGrid.material]) {
 				material.transparent = true;
@@ -601,46 +711,48 @@
 			const town = new THREE.Group();
 			scene.add(town);
 			const buildings = [];
-
-			const road = new THREE.Mesh(
-				new THREE.PlaneGeometry(7.2, 70),
-				new THREE.MeshStandardMaterial({ color: 0x879a91, roughness: 0.94 }),
-			);
-			road.rotation.x = -Math.PI / 2;
-			road.position.set(0, -1.115, 7);
-			town.add(road);
+			const interactiveBuildings = [];
+			const collisionSolids = [];
+			const avenuePositions = [-34, 0, 34];
+			const roadMaterial = new THREE.MeshStandardMaterial({ color: 0x879a91, roughness: 0.94 });
 			const sideRoadMaterial = new THREE.MeshStandardMaterial({ color: 0x899b92, roughness: 0.94 });
 			const crossingSidewalkMaterial = new THREE.MeshStandardMaterial({ color: 0xd5cdb5, roughness: 0.92 });
-			for (let index = 0; index < 4; index += 1) {
-				const crossingZ = index * 10;
-				const sideRoad = new THREE.Mesh(new THREE.PlaneGeometry(36, 3.8), sideRoadMaterial);
+			const sidewalkMaterial = new THREE.MeshStandardMaterial({ color: 0xd5cdb5, roughness: 0.92 });
+			const sidewalkStones = new THREE.MeshStandardMaterial({ color: 0xb9b59f, roughness: 0.9 });
+			for (const avenueX of avenuePositions) {
+				const avenue = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 140), roadMaterial);
+				avenue.rotation.x = -Math.PI / 2;
+				avenue.position.set(avenueX, -1.115, 7);
+				town.add(avenue);
+
+				for (const side of [-1, 1]) {
+					const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 140), sidewalkMaterial);
+					sidewalk.rotation.x = -Math.PI / 2;
+					sidewalk.position.set(avenueX + side * 4.25, -1.105, 7);
+					town.add(sidewalk);
+
+					for (let index = 0; index < 19; index += 1) {
+						const seam = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.012, 0.035), sidewalkStones);
+						seam.position.set(avenueX + side * 4.25, -1.095, -59 + index * 7.5);
+						town.add(seam);
+					}
+				}
+			}
+
+			for (let crossingZ = -50; crossingZ <= 70; crossingZ += 20) {
+				const sideRoad = new THREE.Mesh(new THREE.PlaneGeometry(84, 3.8), sideRoadMaterial);
 				sideRoad.rotation.x = -Math.PI / 2;
 				sideRoad.position.set(0, -1.108, crossingZ);
 				town.add(sideRoad);
 
 				for (const side of [-1, 1]) {
 					const crossingSidewalk = new THREE.Mesh(
-						new THREE.PlaneGeometry(36, 0.8),
+						new THREE.PlaneGeometry(84, 0.8),
 						crossingSidewalkMaterial,
 					);
 					crossingSidewalk.rotation.x = -Math.PI / 2;
 					crossingSidewalk.position.set(0, -1.102, crossingZ + side * 2.35);
 					town.add(crossingSidewalk);
-				}
-			}
-
-			const sidewalkMaterial = new THREE.MeshStandardMaterial({ color: 0xd5cdb5, roughness: 0.92 });
-			const sidewalkStones = new THREE.MeshStandardMaterial({ color: 0xb9b59f, roughness: 0.9 });
-			for (const side of [-1, 1]) {
-				const sidewalk = new THREE.Mesh(new THREE.PlaneGeometry(1.35, 70), sidewalkMaterial);
-				sidewalk.rotation.x = -Math.PI / 2;
-				sidewalk.position.set(side * 4.25, -1.105, 7);
-				town.add(sidewalk);
-
-				for (let index = 0; index < 18; index += 1) {
-					const seam = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.012, 0.035), sidewalkStones);
-					seam.position.set(side * 4.25, -1.095, -26 + index * 3.9);
-					town.add(seam);
 				}
 			}
 
@@ -661,12 +773,189 @@
 				emissive: 0x315960,
 				emissiveIntensity: 0.12,
 			});
-			const interiorFloorMaterial = new THREE.MeshStandardMaterial({ color: 0xb69b77, roughness: 0.96 });
-			const interiorWallMaterial = new THREE.MeshStandardMaterial({ color: 0xe7d8bd, roughness: 0.9, side: THREE.DoubleSide });
-			const furnitureMaterial = new THREE.MeshStandardMaterial({ color: 0x785b48, roughness: 0.82 });
-			const fabricMaterial = new THREE.MeshStandardMaterial({ color: 0x98aaa0, roughness: 0.94 });
+			function createInteriorTexture(type) {
+				const textureCanvas = document.createElement("canvas");
+				textureCanvas.width = 512;
+				textureCanvas.height = 512;
+				const context = textureCanvas.getContext("2d");
+				if (type === "wood") {
+					const plankColors = ["#9b7552", "#a6815b", "#92704f", "#a07a54"];
+					for (let row = 0; row < 8; row += 1) {
+						const top = row * 64;
+						context.fillStyle = plankColors[row % plankColors.length];
+						context.fillRect(0, top, 512, 64);
+						context.fillStyle = "rgba(54, 35, 23, 0.4)";
+						context.fillRect(0, top, 512, 3);
+						const offset = row % 2 === 0 ? 0 : -64;
+						for (let x = offset; x < 512; x += 128) {
+							context.fillStyle = "rgba(50, 33, 22, 0.38)";
+							context.fillRect(x, top, 3, 64);
+							context.strokeStyle = "rgba(239, 205, 157, 0.18)";
+							context.lineWidth = 2;
+							for (const grainY of [top + 15, top + 36, top + 51]) {
+								context.beginPath();
+								context.moveTo(x + 8, grainY);
+								context.bezierCurveTo(x + 38, grainY - 5, x + 84, grainY + 5, x + 116, grainY - 2);
+								context.stroke();
+							}
+						}
+					}
+				} else if (type === "rug") {
+					context.fillStyle = "#b96f55";
+					context.fillRect(0, 0, 512, 512);
+					context.strokeStyle = "#e7c58e";
+					context.lineWidth = 14;
+					context.strokeRect(22, 22, 468, 468);
+					context.lineWidth = 4;
+					context.strokeRect(43, 43, 426, 426);
+					for (let x = 96; x < 480; x += 64) {
+						for (let y = 96; y < 480; y += 64) {
+							context.save();
+							context.translate(x, y);
+							context.rotate(Math.PI / 4);
+							context.fillStyle = "#e7c58e";
+							context.fillRect(-13, -13, 26, 26);
+							context.restore();
+						}
+					}
+				} else if (type === "furnitureWood") {
+					context.fillStyle = "#8c6748";
+					context.fillRect(0, 0, 512, 512);
+					for (let x = 0; x < 512; x += 64) {
+						context.fillStyle = x % 128 === 0
+							? "rgba(54, 35, 23, 0.18)"
+							: "rgba(239, 205, 157, 0.08)";
+						context.fillRect(x, 0, 3, 512);
+					}
+					for (let line = 0; line < 24; line += 1) {
+						const y = line * 23;
+						context.strokeStyle = line % 2 === 0
+							? "rgba(56, 35, 21, 0.2)"
+							: "rgba(241, 210, 165, 0.16)";
+						context.lineWidth = line % 3 === 0 ? 3 : 1;
+						context.beginPath();
+						context.moveTo(0, y);
+						context.bezierCurveTo(150, y - 5, 328, y + 6, 512, y - 2);
+						context.stroke();
+					}
+					for (const [x, y] of [[128, 128], [384, 352]]) {
+						context.strokeStyle = "rgba(55, 34, 20, 0.32)";
+						context.lineWidth = 3;
+						context.beginPath();
+						context.ellipse(x, y, 22, 10, 0.1, 0, Math.PI * 2);
+						context.stroke();
+					}
+				} else if (type === "fabric") {
+					context.fillStyle = "#9caea3";
+					context.fillRect(0, 0, 512, 512);
+					for (let line = 0; line < 512; line += 8) {
+						context.strokeStyle = line % 16 === 0
+							? "rgba(47, 70, 60, 0.12)"
+							: "rgba(255, 255, 255, 0.12)";
+						context.lineWidth = 2;
+						context.beginPath();
+						context.moveTo(line, 0);
+						context.lineTo(line, 512);
+						context.stroke();
+						context.beginPath();
+						context.moveTo(0, line);
+						context.lineTo(512, line);
+						context.stroke();
+					}
+				} else if (type === "paintedWood") {
+					context.fillStyle = "#c3ad8b";
+					context.fillRect(0, 0, 512, 512);
+					for (let panel = 0; panel < 4; panel += 1) {
+						const x = panel * 128 + 12;
+						context.fillStyle = "rgba(75, 58, 42, 0.1)";
+						context.fillRect(x, 12, 104, 488);
+						context.strokeStyle = "rgba(238, 222, 194, 0.36)";
+						context.lineWidth = 5;
+						context.strokeRect(x + 10, 28, 84, 456);
+					}
+					for (let line = 0; line < 32; line += 1) {
+						context.strokeStyle = "rgba(91, 67, 45, 0.1)";
+						context.lineWidth = 1;
+						context.beginPath();
+						context.moveTo(0, line * 16);
+						context.lineTo(512, line * 16 + 4);
+						context.stroke();
+					}
+				} else if (type === "art") {
+					context.fillStyle = "#b8d7d2";
+					context.fillRect(0, 0, 512, 512);
+					context.fillStyle = "#edc47d";
+					context.beginPath();
+					context.arc(382, 112, 52, 0, Math.PI * 2);
+					context.fill();
+					context.fillStyle = "#779b83";
+					context.beginPath();
+					context.moveTo(0, 326);
+					context.bezierCurveTo(120, 236, 208, 290, 300, 228);
+					context.bezierCurveTo(394, 170, 442, 218, 512, 194);
+					context.lineTo(512, 512);
+					context.lineTo(0, 512);
+					context.closePath();
+					context.fill();
+					context.fillStyle = "#506f60";
+					context.beginPath();
+					context.moveTo(0, 392);
+					context.bezierCurveTo(124, 344, 216, 418, 330, 350);
+					context.bezierCurveTo(402, 310, 452, 332, 512, 296);
+					context.lineTo(512, 512);
+					context.lineTo(0, 512);
+					context.closePath();
+					context.fill();
+				} else {
+					context.fillStyle = "#e7dcc7";
+					context.fillRect(0, 0, 512, 512);
+					for (let index = 0; index < 1800; index += 1) {
+						const x = (index * 197) % 512;
+						const y = (index * 311) % 512;
+						context.fillStyle = index % 2 === 0
+							? "rgba(112, 91, 67, 0.14)"
+							: "rgba(255, 255, 255, 0.22)";
+						context.fillRect(x, y, 2, 2);
+					}
+					for (let index = 0; index < 120; index += 1) {
+						const x = (index * 173) % 512;
+						const y = (index * 293) % 512;
+						context.fillStyle = index % 2 === 0
+							? "rgba(145, 118, 83, 0.035)"
+							: "rgba(255, 255, 255, 0.06)";
+						context.beginPath();
+						context.ellipse(x, y, 12 + (index % 5) * 3, 5 + (index % 3) * 2, index * 0.13, 0, Math.PI * 2);
+						context.fill();
+					}
+				}
+				const texture = new THREE.CanvasTexture(textureCanvas);
+				texture.colorSpace = THREE.SRGBColorSpace;
+				texture.wrapS = THREE.RepeatWrapping;
+				texture.wrapT = THREE.RepeatWrapping;
+				return texture;
+			}
+
+			const interiorFloorMaterial = new THREE.MeshStandardMaterial({
+				map: createInteriorTexture("wood"),
+				roughness: 0.84,
+			});
+			const interiorWallTexture = createInteriorTexture("plaster");
+			const interiorRugTexture = createInteriorTexture("rug");
+			const interiorPictureTexture = createInteriorTexture("art");
+			const furnitureWoodTexture = createInteriorTexture("furnitureWood");
+			const furnitureFabricTexture = createInteriorTexture("fabric");
+			const paintedFurnitureTexture = createInteriorTexture("paintedWood");
+			const interiorTrimMaterial = new THREE.MeshStandardMaterial({ color: 0xc3a77f, roughness: 0.78 });
+			const furnitureMaterial = new THREE.MeshStandardMaterial({
+				map: furnitureWoodTexture,
+				roughness: 0.82,
+			});
+			const fabricMaterial = new THREE.MeshStandardMaterial({
+				map: furnitureFabricTexture,
+				roughness: 0.94,
+			});
 			const searchMaterials = [0x647b71, 0x84715c, 0x596c74].map((color) =>
-				new THREE.MeshStandardMaterial({ color, roughness: 0.78 }),
+				new THREE.MeshStandardMaterial({ color, map: paintedFurnitureTexture, roughness: 0.78 }),
 			);
 
 			function addHouse(x, z, side, index) {
@@ -679,6 +968,18 @@
 				const interior = new THREE.Group();
 				interior.visible = false;
 				house.add(interior);
+				const roomShell = new THREE.Group();
+				roomShell.scale.setScalar(2);
+				interior.add(roomShell);
+				const furnitureGroup = new THREE.Group();
+				furnitureGroup.scale.setScalar(1.2);
+				interior.add(furnitureGroup);
+				const interiorWallMaterial = new THREE.MeshStandardMaterial({
+					color: [0xffffff, 0xf3eee2, 0xe8f0e5, 0xf3e7df][index % 4],
+					map: interiorWallTexture,
+					roughness: 0.9,
+					side: THREE.DoubleSide,
+				});
 
 				const foundation = new THREE.Mesh(
 					new THREE.BoxGeometry(3.75, 0.22, 3.55),
@@ -751,50 +1052,122 @@
 
 				const floor = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.08, 3.15), interiorFloorMaterial);
 				floor.position.y = 0.04;
-				interior.add(floor);
+				roomShell.add(floor);
 
 				const backWall = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1, 0.12), interiorWallMaterial);
 				backWall.position.set(0, 0.58, -1.53);
-				interior.add(backWall);
-				const frontWall = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1, 0.12), interiorWallMaterial);
-				frontWall.position.set(0, 0.58, 1.53);
-				interior.add(frontWall);
+				roomShell.add(backWall);
+				for (const wallSide of [-1, 1]) {
+					const frontWallSection = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.12), interiorWallMaterial);
+					frontWallSection.position.set(wallSide * 1.15, 0.58, 1.53);
+					roomShell.add(frontWallSection);
+				}
+				const doorLintelWall = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 0.12), interiorWallMaterial);
+				doorLintelWall.position.set(0, 1.02, 1.53);
+				roomShell.add(doorLintelWall);
 				for (const wallSide of [-1, 1]) {
 					const sideWall = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1, 3.1), interiorWallMaterial);
 					sideWall.position.set(wallSide * 1.62, 0.58, 0);
-					interior.add(sideWall);
+					roomShell.add(sideWall);
 				}
 				const ceiling = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.12, 3.15), interiorWallMaterial);
 				ceiling.position.y = 2.94;
 				ceiling.visible = false;
-				interior.add(ceiling);
+				roomShell.add(ceiling);
+
+				const interiorDoorFrameMaterial = interiorTrimMaterial;
+				for (const frameSide of [-1, 1]) {
+					const doorFramePost = new THREE.Mesh(
+						new THREE.BoxGeometry(0.1, 0.98, 0.16),
+						interiorDoorFrameMaterial,
+					);
+					doorFramePost.position.set(frameSide * 0.65, 0.53, 1.48);
+					roomShell.add(doorFramePost);
+				}
+				const interiorDoorHeader = new THREE.Mesh(
+					new THREE.BoxGeometry(1.4, 0.12, 0.16),
+					interiorDoorFrameMaterial,
+				);
+				interiorDoorHeader.position.set(0, 1.03, 1.48);
+				roomShell.add(interiorDoorHeader);
+
+				const interiorDoor = new THREE.Group();
+				interiorDoor.position.set(-0.59, 0.04, 1.45);
+				roomShell.add(interiorDoor);
+				const interiorDoorLeaf = new THREE.Mesh(
+					new THREE.BoxGeometry(1.18, 0.9, 0.07),
+					doorMaterials[index % doorMaterials.length],
+				);
+				interiorDoorLeaf.position.set(0.59, 0.46, 0);
+				interiorDoor.add(interiorDoorLeaf);
+				const interiorDoorHandle = new THREE.Mesh(
+					new THREE.SphereGeometry(0.045, 12, 10),
+					new THREE.MeshStandardMaterial({ color: 0xd8b45d, metalness: 0.55, roughness: 0.32 }),
+				);
+				interiorDoorHandle.position.set(1.02, 0.46, 0.055);
+				interiorDoor.add(interiorDoorHandle);
+
+				const baseboardBack = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.14, 0.08), interiorTrimMaterial);
+				baseboardBack.position.set(0, 0.16, -1.45);
+				roomShell.add(baseboardBack);
+				const baseboardFront = baseboardBack.clone();
+				baseboardFront.position.z = 1.45;
+				roomShell.add(baseboardFront);
+				for (const wallSide of [-1, 1]) {
+					const baseboardSide = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.14, 2.9), interiorTrimMaterial);
+					baseboardSide.position.set(wallSide * 1.54, 0.16, 0);
+					roomShell.add(baseboardSide);
+				}
+
+				const pictureFrame = new THREE.Mesh(
+					new THREE.BoxGeometry(0.82, 0.62, 0.07),
+					interiorTrimMaterial,
+				);
+				pictureFrame.position.set(0, 0.76, -1.42);
+				roomShell.add(pictureFrame);
+				const picture = new THREE.Mesh(
+					new THREE.PlaneGeometry(0.68, 0.48),
+					new THREE.MeshBasicMaterial({ map: interiorPictureTexture }),
+				);
+				picture.position.set(0, 0.76, -1.378);
+				roomShell.add(picture);
+
+				const rug = new THREE.Mesh(
+					new THREE.BoxGeometry(1.45, 0.025, 1.05),
+					new THREE.MeshStandardMaterial({ map: interiorRugTexture, roughness: 1 }),
+				);
+				rug.position.set(0.12, 0.095, 0.12);
+				furnitureGroup.add(rug);
 
 				const bedBase = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.3, 1.7), furnitureMaterial);
 				bedBase.position.set(-0.88, 0.24, 0.14);
-				interior.add(bedBase);
+				furnitureGroup.add(bedBase);
 				const mattress = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.18, 1.62), fabricMaterial);
 				mattress.position.set(-0.88, 0.46, 0.14);
-				interior.add(mattress);
-				const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.12, 0.38), trimMaterial);
+				furnitureGroup.add(mattress);
+				const pillow = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.12, 0.38), fabricMaterial);
 				pillow.position.set(-0.88, 0.59, -0.43);
-				interior.add(pillow);
+				furnitureGroup.add(pillow);
 
 				const tableTop = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.12, 0.85), furnitureMaterial);
 				tableTop.position.set(0.48, 0.75, 0.42);
-				interior.add(tableTop);
+				furnitureGroup.add(tableTop);
 				for (const tableX of [0.02, 0.94]) {
 					for (const tableZ of [0.12, 0.72]) {
 						const tableLeg = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.68, 0.1), furnitureMaterial);
 						tableLeg.position.set(tableX, 0.38, tableZ);
-						interior.add(tableLeg);
+						furnitureGroup.add(tableLeg);
 					}
 				}
 
 				const containers = [];
 				const containerSpecs = [
-					{ label: "buffet", position: [-0.92, 0.48, -0.95], size: [0.82, 0.82, 0.56], loot: ["boîte de haricots", "bouteille d’eau", "conserve"] },
-					{ label: "commode", position: [1.02, 0.43, -0.88], size: [0.76, 0.72, 0.52], loot: ["bandage", "médicaments", "boîte de conserve"] },
-					{ label: "placard", position: [1.02, 0.55, 0.72], size: [0.72, 0.95, 0.5], loot: ["médicaments", "couteau de cuisine", "paquet de biscuits"] },
+					{ label: "buffet", position: [-1.72, 0.48, -1.52], size: [0.82, 0.82, 0.56], loot: ["boîte de haricots", "bouteille d’eau", "conserve"] },
+					{ label: "commode", position: [1.72, 0.43, -1.52], size: [0.76, 0.72, 0.52], loot: ["bandage", "médicaments", "boîte de conserve"] },
+					{ label: "placard", position: [-1.72, 0.55, 1.52], size: [0.72, 0.95, 0.5], loot: ["médicaments", "couteau de cuisine", "paquet de biscuits"] },
+					{ label: "bibliothèque", position: [1.72, 0.68, 1.52], size: [0.78, 1.16, 0.48], loot: ["bandage", "boîte de haricots", "médicaments"] },
+					{ label: "coffre", position: [-2.05, 0.34, 0], size: [0.68, 0.56, 0.72], loot: ["conserve", "médicaments", "couteau de cuisine"] },
+					{ label: "table de chevet", position: [2.05, 0.36, 0], size: [0.62, 0.6, 0.64], loot: ["bouteille d’eau", "bandage", "paquet de biscuits"] },
 				];
 				for (const [containerIndex, spec] of containerSpecs.entries()) {
 					const furniture = new THREE.Mesh(
@@ -802,26 +1175,547 @@
 						searchMaterials[(index + containerIndex) % searchMaterials.length],
 					);
 					furniture.position.set(...spec.position);
-					interior.add(furniture);
+					furnitureGroup.add(furniture);
 					containers.push({ mesh: furniture, label: spec.label, loot: spec.loot[index % spec.loot.length], searched: false });
 				}
 
-				buildings.push({
+				const building = {
 					group: house,
 					exterior,
 					interior,
 					ceiling,
 					containers,
+					roomBounds: { x: 2.75, z: 2.55 },
+					hasZombieEncounter: Math.random() < 0.4,
+					interiorZombie: null,
 					doorPosition: new THREE.Vector3(0, 0.95, 1.72),
-				});
-				house.scale.setScalar(1.4);
+					interiorDoor,
+					interiorDoorOpen: false,
+					interiorDoorPosition: new THREE.Vector3(0, 1, 2.9),
+				};
+				buildings.push(building);
+				interactiveBuildings.push(building);
+				collisionSolids.push({ group: house, halfWidth: 1.875, halfDepth: 1.775 });
+				house.scale.setScalar(1.6);
 			}
 
-			for (let index = 0; index < 5; index += 1) {
-				const z = -5 + index * 10;
-				addHouse(-7.4, z, -1, index);
-				addHouse(7.4, z, 1, index + 1);
+			for (let index = 0; index < 6; index += 1) {
+				const z = -40 + index * 20;
+				addHouse(-7.7, z, -1, index);
+				addHouse(7.7, z, 1, index + 1);
+				addHouse(-42, z, -1, index + 12);
+				addHouse(42, z, 1, index + 13);
 			}
+
+			const urbanFacadeMaterials = [0xd4c4a4, 0xb9c2b5, 0xcbb5a2, 0xb8bec1].map((color) =>
+				new THREE.MeshStandardMaterial({ color, roughness: 0.88 }),
+			);
+			const urbanRoofMaterial = new THREE.MeshStandardMaterial({ color: 0x555c59, roughness: 0.92 });
+			const urbanConcreteMaterial = new THREE.MeshStandardMaterial({ color: 0xbab5a5, roughness: 0.94 });
+			const urbanFrameMaterial = new THREE.MeshStandardMaterial({ color: 0xe8ddc4, roughness: 0.78 });
+			const urbanGlassMaterial = new THREE.MeshStandardMaterial({
+				color: 0x83aeb7,
+				metalness: 0.08,
+				roughness: 0.28,
+				emissive: 0x263e43,
+				emissiveIntensity: 0.08,
+			});
+			const stainedGlassMaterials = [
+				0x6da6a0,
+				0x9b758b,
+				0xd0a76e,
+			].map((color) => new THREE.MeshStandardMaterial({
+				color,
+				emissive: color,
+				emissiveIntensity: 0.18,
+				roughness: 0.35,
+			}));
+			const urbanMetalMaterial = new THREE.MeshStandardMaterial({ color: 0x676f6b, metalness: 0.35, roughness: 0.62 });
+
+			function addUrbanWindow(group, x, y, z, width, height, paneMaterial = urbanGlassMaterial) {
+				const frame = new THREE.Mesh(
+					new THREE.BoxGeometry(width + 0.16, height + 0.16, 0.14),
+					urbanFrameMaterial,
+				);
+				frame.position.set(x, y, z);
+				group.add(frame);
+
+				const pane = new THREE.Mesh(
+					new THREE.BoxGeometry(width, height, 0.08),
+					paneMaterial,
+				);
+				pane.position.set(x, y, z + 0.08);
+				group.add(pane);
+
+				const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.045, height, 0.035), urbanFrameMaterial);
+				mullion.position.set(x, y, z + 0.14);
+				group.add(mullion);
+				const sill = new THREE.Mesh(new THREE.BoxGeometry(width + 0.24, 0.09, 0.22), urbanFrameMaterial);
+				sill.position.set(x, y - height / 2 - 0.12, z + 0.02);
+				group.add(sill);
+			}
+
+			function addUrbanSign(group, text, x, y, z, width, backgroundColor) {
+				const signCanvas = document.createElement("canvas");
+				signCanvas.width = 512;
+				signCanvas.height = 96;
+				const context = signCanvas.getContext("2d");
+				context.fillStyle = backgroundColor;
+				context.fillRect(0, 0, signCanvas.width, signCanvas.height);
+				context.strokeStyle = "rgba(246, 232, 198, 0.7)";
+				context.lineWidth = 6;
+				context.strokeRect(5, 5, signCanvas.width - 10, signCanvas.height - 10);
+				let fontSize = 36;
+				context.textAlign = "center";
+				context.textBaseline = "middle";
+				context.fillStyle = "#f4ead1";
+				context.font = `bold ${fontSize}px Trebuchet MS, sans-serif`;
+				while (context.measureText(text).width > signCanvas.width - 32 && fontSize > 18) {
+					fontSize -= 2;
+					context.font = `bold ${fontSize}px Trebuchet MS, sans-serif`;
+				}
+				context.fillText(text, signCanvas.width / 2, signCanvas.height / 2);
+
+				const texture = new THREE.CanvasTexture(signCanvas);
+				texture.colorSpace = THREE.SRGBColorSpace;
+				const sign = new THREE.Mesh(
+					new THREE.PlaneGeometry(width, 0.62),
+					new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, toneMapped: false }),
+				);
+				sign.position.set(x, y, z);
+				group.add(sign);
+				return sign;
+			}
+
+			function createLandmarkInterior(group, index, type) {
+				const interior = new THREE.Group();
+				interior.visible = false;
+				group.add(interior);
+				const wallMaterial = new THREE.MeshStandardMaterial({
+					color: [0xf0ede2, 0xe9e6d9, 0xe8eee8][index % 3],
+					map: interiorWallTexture,
+					roughness: 0.92,
+					side: THREE.DoubleSide,
+				});
+				const addBox = (width, height, depth, x, y, z, material) => {
+					const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+					mesh.position.set(x, y, z);
+					interior.add(mesh);
+					return mesh;
+				};
+				const containers = [];
+				const addContainer = (label, x, z, width, height, depth, loot) => {
+					const mesh = addBox(
+						width,
+						height,
+						depth,
+						x,
+						height / 2,
+						z,
+						searchMaterials[(index + containers.length) % searchMaterials.length],
+					);
+					containers.push({
+						mesh,
+						label,
+						loot: loot[(index + containers.length) % loot.length],
+						searched: false,
+					});
+					return mesh;
+				};
+				const addShelf = (label, x, z, width, height, loot) => {
+					const shelf = addContainer(label, x, z, width, height, 0.55, loot);
+					for (const shelfY of [0.35, 0.82, 1.29]) {
+						if (shelfY < height - 0.1) {
+							addBox(width + 0.08, 0.06, 0.62, x, shelfY, z, interiorTrimMaterial);
+						}
+					}
+					return shelf;
+				};
+				const addTable = (x, z, width = 1.25, depth = 0.8) => {
+					addBox(width, 0.12, depth, x, 0.74, z, furnitureMaterial);
+					for (const legX of [-1, 1]) {
+						for (const legZ of [-1, 1]) {
+							addBox(0.09, 0.68, 0.09, x + legX * (width / 2 - 0.1), 0.38, z + legZ * (depth / 2 - 0.1), furnitureMaterial);
+						}
+					}
+				};
+				const addChair = (x, z) => {
+					addBox(0.48, 0.1, 0.48, x, 0.48, z, furnitureMaterial);
+					addBox(0.48, 0.62, 0.09, x, 0.8, z - 0.2, furnitureMaterial);
+					for (const legX of [-1, 1]) {
+						for (const legZ of [-1, 1]) {
+							addBox(0.07, 0.46, 0.07, x + legX * 0.18, 0.25, z + legZ * 0.18, furnitureMaterial);
+						}
+					}
+				};
+				const addBed = (x, z) => {
+					addBox(1.3, 0.2, 2.05, x, 0.2, z, urbanMetalMaterial);
+					addBox(1.22, 0.22, 1.95, x, 0.42, z, fabricMaterial);
+					addBox(0.86, 0.12, 0.36, x, 0.59, z + 0.7, interiorTrimMaterial);
+				};
+				addBox(7.2, 0.08, 7.2, 0, 0.04, 0, interiorFloorMaterial);
+				addBox(7.2, 3.1, 0.18, 0, 1.62, -3.51, wallMaterial);
+				addBox(0.18, 3.1, 7.2, -3.51, 1.62, 0, wallMaterial);
+				addBox(0.18, 3.1, 7.2, 3.51, 1.62, 0, wallMaterial);
+				for (const wallSide of [-1, 1]) {
+					addBox(2.72, 3.1, 0.18, wallSide * 2.24, 1.62, 3.51, wallMaterial);
+					addBox(0.12, 2.25, 0.16, wallSide * 0.82, 1.18, 3.38, interiorTrimMaterial);
+				}
+				addBox(1.76, 0.46, 0.16, 0, 2.95, 3.38, wallMaterial);
+				const ceiling = addBox(7.2, 0.12, 7.2, 0, 3.22, 0, wallMaterial);
+				ceiling.visible = false;
+
+				const interiorDoor = new THREE.Group();
+				interiorDoor.position.set(-0.76, 0.05, 3.38);
+				interior.add(interiorDoor);
+				const doorLeaf = new THREE.Mesh(
+					new THREE.BoxGeometry(1.48, 2.12, 0.08),
+					doorMaterials[index % doorMaterials.length],
+				);
+				doorLeaf.position.set(0.74, 1.06, 0);
+				interiorDoor.add(doorLeaf);
+				const doorHandle = new THREE.Mesh(
+					new THREE.SphereGeometry(0.055, 12, 10),
+					new THREE.MeshStandardMaterial({ color: 0xd8b45d, metalness: 0.55, roughness: 0.32 }),
+				);
+				doorHandle.position.set(1.29, 1.03, 0.065);
+				interiorDoor.add(doorHandle);
+
+				if (type === "diner") {
+					addContainer("comptoir", 0, -2.62, 3.7, 0.95, 0.7, ["conserve", "bouteille d’eau", "boîte de haricots"]);
+					addShelf("meuble de réserve", -2.48, -1.55, 0.72, 1.55, ["boîte de haricots", "conserve"]);
+					for (const [x, z] of [[-1.55, -0.5], [1.55, -0.5], [0, -1.7]]) {
+						addTable(x, z, 1.15, 0.78);
+						addChair(x - 0.82, z);
+						addChair(x + 0.82, z);
+					}
+				} else if (type === "hospital") {
+					addBed(-2.05, -0.25);
+					addBed(2.05, -0.25);
+					addContainer("placard médical", -2.55, -2.55, 0.72, 1.65, 0.55, ["bandage", "médicaments"]);
+					addContainer("chariot médical", 2.55, -2.5, 0.78, 0.82, 0.58, ["médicaments", "bandage"]);
+					addBox(0.52, 0.9, 0.5, 0, 0.45, -2.45, searchMaterials[index % searchMaterials.length]);
+				} else if (type === "pharmacy") {
+					addShelf("rayon de médicaments", -2.45, -0.7, 0.82, 1.85, ["médicaments", "bandage"]);
+					addShelf("vitrine de soins", 2.45, -0.7, 0.82, 1.55, ["bandage", "médicaments"]);
+					addContainer("comptoir", 0, -2.55, 2.6, 0.9, 0.72, ["médicaments", "bandage"]);
+				} else if (type === "shop") {
+					addShelf("rayon d’épicerie", -2.4, -0.45, 0.82, 1.8, ["conserve", "boîte de haricots"]);
+					addShelf("étagère de provisions", 2.4, -0.45, 0.82, 1.8, ["bouteille d’eau", "paquet de biscuits"]);
+					addContainer("comptoir", 0, -2.55, 2.5, 0.9, 0.72, ["conserve", "boîte de haricots"]);
+				} else if (type === "school") {
+					for (const z of [-1.25, 0.2]) {
+						for (const x of [-1.7, 0, 1.7]) {
+							addTable(x, z, 1.05, 0.72);
+							addChair(x, z + 0.62);
+						}
+					}
+					addContainer("casier", -2.55, -2.55, 0.72, 1.65, 0.52, ["bandage", "paquet de biscuits"]);
+					addContainer("bureau du professeur", 2.2, -2.6, 1.35, 0.82, 0.72, ["bouteille d’eau", "conserve"]);
+				} else if (type === "church") {
+					for (const z of [-1.35, 0.15]) {
+						for (const x of [-1.35, 1.35]) {
+							addBox(1.65, 0.12, 0.48, x, 0.58, z, furnitureMaterial);
+							for (const legX of [-1, 1]) {
+								addBox(0.08, 0.54, 0.08, x + legX * 0.68, 0.28, z, furnitureMaterial);
+							}
+							addBox(1.65, 0.62, 0.1, x, 0.95, z - 0.19, furnitureMaterial);
+						}
+					}
+					addBox(2.2, 0.22, 0.72, 0, 0.85, -2.45, furnitureMaterial);
+					addContainer("coffre de la sacristie", 2.55, -2.45, 0.7, 0.82, 0.55, ["bandage", "bouteille d’eau"]);
+				} else if (type === "office") {
+					for (const x of [-1.65, 1.65]) {
+						addTable(x, -0.1, 1.45, 0.85);
+						addChair(x, 0.85);
+					}
+					addShelf("classeur", -2.55, -2.55, 0.72, 1.8, ["bandage", "bouteille d’eau"]);
+					addContainer("bureau d’accueil", 1.9, -2.55, 1.3, 0.9, 0.72, ["conserve", "paquet de biscuits"]);
+				} else if (type === "apartments") {
+					addBed(-2, -0.55);
+					addShelf("armoire", -2.5, -2.5, 0.72, 1.75, ["vêtements", "bandage"]);
+					addBox(1.9, 0.62, 0.72, 1.55, 0.48, -1.2, fabricMaterial);
+					addBox(1.9, 0.72, 0.16, 1.55, 0.82, -0.85, fabricMaterial);
+					addTable(1.1, 0.65, 1.05, 0.72);
+					addContainer("meuble de cuisine", 2.45, 2.45, 0.78, 1.25, 0.55, ["conserve", "bouteille d’eau"]);
+				} else if (type === "warehouse") {
+					addShelf("rayonnage de stockage", -2.45, -1.45, 0.78, 1.9, ["boîte de haricots", "conserve"]);
+					addShelf("étagère de réserve", 2.45, -1.45, 0.78, 1.9, ["bouteille d’eau", "paquet de biscuits"]);
+					addContainer("caisse de livraison", 0, -2.55, 1.25, 0.82, 0.8, ["conserve", "bandage"]);
+				} else if (type === "gas") {
+					addContainer("comptoir de la station", 0, -2.55, 2.5, 0.9, 0.72, ["bouteille d’eau", "paquet de biscuits"]);
+					addShelf("réserve de la station", -2.45, -1.2, 0.78, 1.6, ["conserve", "bouteille d’eau"]);
+				}
+
+				return {
+					interior,
+					interiorDoor,
+					containers,
+					interiorDoorPosition: new THREE.Vector3(0, 0.95, 2.9),
+					roomBounds: { x: 3.05, z: 3.15 },
+				};
+			}
+
+			function addLandmark(type, x, z, side, label, paletteIndex) {
+				const group = new THREE.Group();
+				group.position.set(x, -1.14, z);
+				group.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
+				town.add(group);
+				const exterior = new THREE.Group();
+				group.add(exterior);
+
+				const wallMaterial = urbanFacadeMaterials[paletteIndex % urbanFacadeMaterials.length];
+				let halfWidth = 4.1;
+				let halfDepth = 4.8;
+				let collisionCenterZ = 0;
+				let doorZ = 4.8;
+				const addBox = (width, height, depth, position, material) => {
+					const mesh = new THREE.Mesh(new THREE.BoxGeometry(width, height, depth), material);
+					mesh.position.set(...position);
+					exterior.add(mesh);
+					return mesh;
+				};
+				const addBase = (width, depth) =>
+					addBox(width, 0.3, depth, [0, 0.15, 0], urbanConcreteMaterial);
+
+				if (type === "church") {
+					halfWidth = 4.2;
+					halfDepth = 5.3;
+					addBase(8.2, 10.3);
+					addBox(7.7, 3.7, 9.7, [0, 1.95, 0], wallMaterial);
+					for (const slope of [-1, 1]) {
+						const roof = addBox(4.45, 0.26, 10, [slope * 1.72, 4.02, 0], urbanRoofMaterial);
+						roof.rotation.z = -slope * 0.42;
+					}
+					addBox(2.4, 5.2, 2.4, [0, 4.55, 3.6], wallMaterial);
+					const steeple = new THREE.Mesh(new THREE.ConeGeometry(1.7, 3.3, 4), urbanRoofMaterial);
+					steeple.position.set(0, 8.78, 3.6);
+					steeple.rotation.y = Math.PI / 4;
+					exterior.add(steeple);
+					addBox(0.16, 1.25, 0.16, [0, 10.72, 3.6], urbanFrameMaterial);
+					addBox(0.82, 0.16, 0.16, [0, 10.88, 3.6], urbanFrameMaterial);
+					addBox(1.25, 2.35, 0.14, [0, 1.28, 4.92], doorMaterials[1]);
+					doorZ = 4.92;
+					addUrbanSign(exterior, label, 0, 3.08, 4.97, 1.8, "#4e6258");
+					for (const windowX of [-2.55, 2.55]) {
+						addUrbanWindow(exterior, windowX, 1.82, 4.91, 0.72, 1.9, stainedGlassMaterials[Math.abs(Math.round(windowX)) % stainedGlassMaterials.length]);
+					}
+				} else if (type === "school") {
+					halfWidth = 4.25;
+					halfDepth = 5.3;
+					doorZ = 4.02;
+					addBase(8.3, 10.2);
+					addBox(7.9, 4.2, 8.2, [0, 2.25, -0.25], wallMaterial);
+					addBox(2.2, 3.1, 4.5, [2.7, 1.7, -3.1], urbanFacadeMaterials[(paletteIndex + 1) % urbanFacadeMaterials.length]);
+					addBox(8.25, 0.28, 8.55, [0, 4.5, -0.25], urbanRoofMaterial);
+					addUrbanSign(exterior, label, 0, 3.78, 4.02, 4.5, "#4b5e59");
+					addBox(1.3, 2.3, 0.13, [0, 1.25, 4.02], doorMaterials[0]);
+					for (const windowX of [-2.8, 0, 2.8]) {
+						addUrbanWindow(exterior, windowX, 1.68, 4.03, 1.05, 1.25);
+						addUrbanWindow(exterior, windowX, 3.12, 4.03, 1.05, 1.15);
+					}
+					const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.07, 6, 8), urbanMetalMaterial);
+					pole.position.set(3.35, 3, 3.85);
+					exterior.add(pole);
+					addBox(0.95, 0.52, 0.04, [3.82, 5.38, 3.85], new THREE.MeshStandardMaterial({ color: 0x9c5e4d, roughness: 0.8 }));
+				} else if (type === "shop" || type === "diner" || type === "pharmacy") {
+					halfWidth = 4.15;
+					halfDepth = 4.8;
+					doorZ = 4.3;
+					addBase(8.1, 9.2);
+					addBox(7.8, 3.8, 8.5, [0, 1.95, -0.1], wallMaterial);
+					addBox(8.05, 0.3, 8.75, [0, 3.98, -0.1], urbanRoofMaterial);
+					addBox(8, 0.2, 0.78, [0, 2.82, 4.18], roofMaterials[paletteIndex % roofMaterials.length]);
+					addUrbanSign(exterior, label, 0, 3.48, 4.22, 6.5, type === "pharmacy" ? "#4c6a62" : "#795846");
+					addUrbanWindow(exterior, -2.15, 1.75, 4.18, 2.35, 1.55);
+					addUrbanWindow(exterior, 2.15, 1.75, 4.18, 2.35, 1.55);
+					addBox(1.05, 2.25, 0.12, [0, 1.18, 4.3], doorMaterials[paletteIndex % doorMaterials.length]);
+					if (type === "pharmacy") {
+						const green = new THREE.MeshStandardMaterial({ color: 0x79a88b, emissive: 0x254532, emissiveIntensity: 0.25 });
+						addBox(0.18, 0.92, 0.16, [3.3, 2.18, 4.55], green);
+						addBox(0.92, 0.18, 0.16, [3.3, 2.18, 4.55], green);
+					}
+					if (type === "diner") {
+						for (let stripe = 0; stripe < 7; stripe += 1) {
+							addBox(0.16, 0.2, 0.8, [-3.35 + stripe * 1.1, 2.82, 4.18], stripe % 2 === 0 ? trimMaterial : urbanRoofMaterial);
+						}
+					}
+				} else if (type === "hospital" || type === "office" || type === "apartments") {
+					const isHospital = type === "hospital";
+					const isApartment = type === "apartments";
+					const floors = isApartment ? 5 : isHospital ? 3 : 4;
+					const floorHeight = isApartment ? 2.2 : 2;
+					const height = floors * floorHeight;
+					halfWidth = 4.15;
+					halfDepth = 4.9;
+					doorZ = 4.54;
+					addBase(8.2, 9.4);
+					addBox(7.8, height, 8.8, [0, height / 2 + 0.3, 0], wallMaterial);
+					addBox(8.05, 0.35, 9.05, [0, height + 0.48, 0], urbanRoofMaterial);
+					for (let floor = 0; floor < floors; floor += 1) {
+						const windowY = 1.18 + floor * floorHeight;
+						for (const windowX of [-2.75, -0.92, 0.92, 2.75]) {
+							addUrbanWindow(exterior, windowX, windowY, 4.48, 0.88, 1.05);
+							if (isApartment) {
+								addBox(1.05, 0.1, 0.42, [windowX, windowY - 0.64, 4.75], urbanConcreteMaterial);
+							}
+						}
+					}
+					addUrbanSign(exterior, label, 0, isApartment ? 1 : height + 0.05, 4.56, isApartment ? 3.8 : 5.6, isHospital ? "#536b68" : "#555d5b");
+					addBox(1.2, 2.2, 0.14, [0, 1.15, 4.54], doorMaterials[1]);
+					if (isHospital) {
+						const red = new THREE.MeshStandardMaterial({ color: 0xb85649, emissive: 0x3e130f, emissiveIntensity: 0.2 });
+						addBox(0.2, 1.1, 0.15, [0, height + 1.5, 4.62], red);
+						addBox(0.9, 0.2, 0.15, [0, height + 1.5, 4.62], red);
+					}
+				} else if (type === "warehouse") {
+					halfWidth = 4.9;
+					halfDepth = 5.25;
+					doorZ = 4.98;
+					addBase(9.6, 10.2);
+					addBox(9.2, 4.6, 9.8, [0, 2.45, 0], wallMaterial);
+					addBox(9.45, 0.35, 10.05, [0, 4.92, 0], urbanRoofMaterial);
+					addUrbanSign(exterior, label, 0, 4.05, 4.98, 6.8, "#555d59");
+					addBox(3.8, 2.7, 0.14, [0, 1.55, 4.98], urbanMetalMaterial);
+					for (let stripe = 0; stripe < 9; stripe += 1) {
+						addBox(3.75, 0.035, 0.16, [0, 0.35 + stripe * 0.29, 5.08], urbanFrameMaterial);
+					}
+					for (const windowX of [-3.25, 3.25]) addUrbanWindow(exterior, windowX, 2.8, 4.98, 0.9, 0.85);
+				} else if (type === "gas") {
+					halfWidth = 5.25;
+					halfDepth = 3.25;
+					collisionCenterZ = -1.1;
+					doorZ = 2.2;
+					addBase(9.8, 9.8);
+					addBox(6.6, 3.6, 6.5, [0, 1.85, -1.1], wallMaterial);
+					addBox(6.85, 0.32, 6.75, [0, 3.8, -1.1], urbanRoofMaterial);
+					addBox(9, 0.28, 4.2, [0, 3.1, 1.45], urbanRoofMaterial);
+					for (const pumpX of [-3.15, 3.15]) {
+						for (const pumpZ of [0.35, 2.45]) {
+							addBox(0.16, 2.75, 0.16, [pumpX, 1.38, pumpZ], urbanMetalMaterial);
+						}
+					}
+					for (const pumpX of [-3.15, 3.15]) {
+						addBox(0.72, 1.05, 0.55, [pumpX, 0.72, 1.45], doorMaterials[0]);
+						addBox(0.48, 0.26, 0.08, [pumpX, 1.05, 1.74], urbanGlassMaterial);
+					}
+					addUrbanSign(exterior, label, 0, 3.4, 2.18, 5.4, "#6a5947");
+					addUrbanWindow(exterior, -1.8, 1.75, 2.18, 1.7, 1.5);
+					addUrbanWindow(exterior, 1.8, 1.75, 2.18, 1.7, 1.5);
+					addBox(1.15, 2.2, 0.14, [0, 1.15, 2.2], doorMaterials[0]);
+				}
+
+				const room = createLandmarkInterior(group, paletteIndex, type);
+				collisionSolids.push({ group, halfWidth, halfDepth, centerZ: collisionCenterZ });
+				return {
+					group,
+					exterior,
+					...room,
+					doorPosition: new THREE.Vector3(0, 0.95, doorZ),
+					interiorDoorOpen: false,
+					interiorZombie: null,
+					isLandmark: true,
+				};
+			}
+
+			const landmarks = [
+				["church", -20.5, -40, -1, "ÉGLISE SAINTE-CLAIRE"],
+				["school", 20.5, -40, 1, "ÉCOLE DES TILLEULS"],
+				["shop", -20.5, -20, -1, "ÉPICERIE DU CENTRE"],
+				["diner", 20.5, -20, 1, "CAFÉ DE LA GARE"],
+				["hospital", -20.5, 0, -1, "CLINIQUE SAINT-MARC"],
+				["pharmacy", 20.5, 0, 1, "PHARMACIE DU PARC"],
+				["school", -20.5, 20, -1, "COLLÈGE DU CANAL"],
+				["apartments", 20.5, 20, 1, "RÉSIDENCE DES PINS"],
+				["warehouse", -20.5, 40, -1, "ENTREPÔT MUNICIPAL"],
+				["gas", 20.5, 40, 1, "STATION DES RIVES"],
+				["office", -20.5, 60, -1, "HÔTEL DE VILLE"],
+				["apartments", 20.5, 60, 1, "RÉSIDENCE DU SQUARE"],
+			];
+			for (const [index, [type, x, z, side, label]] of landmarks.entries()) {
+				interactiveBuildings.push(addLandmark(type, x, z, side, label, index));
+			}
+
+			function addStreetLamp(x, z) {
+				const lamp = new THREE.Group();
+				lamp.position.set(x, -1.14, z);
+				const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.09, 3.7, 8), urbanMetalMaterial);
+				pole.position.y = 1.85;
+				lamp.add(pole);
+				const arm = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.08), urbanMetalMaterial);
+				arm.position.set(0.28, 3.55, 0);
+				lamp.add(arm);
+				const shade = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.2, 0.38), urbanMetalMaterial);
+				shade.position.set(0.55, 3.45, 0);
+				lamp.add(shade);
+				const bulb = new THREE.Mesh(
+					new THREE.SphereGeometry(0.15, 10, 8),
+					new THREE.MeshBasicMaterial({ color: 0xe6d4a0 }),
+				);
+				bulb.position.set(0.55, 3.31, 0);
+				lamp.add(bulb);
+				town.add(lamp);
+			}
+
+			for (const avenueX of avenuePositions) {
+				for (const crossingZ of [-50, -10, 30, 70]) {
+					for (const side of [-1, 1]) addStreetLamp(avenueX + side * 4.8, crossingZ);
+				}
+			}
+
+			function addAbandonedCar(x, z, rotation, bodyColor) {
+				const car = new THREE.Group();
+				car.position.set(x, -1.14, z);
+				car.rotation.y = rotation;
+				const paint = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.82, metalness: 0.08 });
+				const body = new THREE.Mesh(new THREE.BoxGeometry(2.25, 0.72, 1.12), paint);
+				body.position.y = 0.72;
+				car.add(body);
+				const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.28, 0.62, 0.94), urbanGlassMaterial);
+				cabin.position.set(-0.1, 1.32, 0);
+				car.add(cabin);
+				for (const wheelX of [-0.72, 0.78]) {
+					for (const wheelZ of [-0.58, 0.58]) {
+						const wheel = new THREE.Mesh(
+							new THREE.CylinderGeometry(0.32, 0.32, 0.18, 12),
+							new THREE.MeshStandardMaterial({ color: 0x303634, roughness: 0.96 }),
+						);
+						wheel.rotation.z = Math.PI / 2;
+						wheel.position.set(wheelX, 0.42, wheelZ);
+						car.add(wheel);
+					}
+				}
+				const windowTint = new THREE.MeshStandardMaterial({ color: 0x415452, roughness: 0.5 });
+				for (const side of [-1, 1]) {
+					const sideWindow = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.35, 0.035), windowTint);
+					sideWindow.position.set(-0.1, 1.34, side * 0.49);
+					car.add(sideWindow);
+				}
+				town.add(car);
+			}
+
+			[
+				[-5.8, -30, 0.08, 0x737d77],
+				[5.8, 10, -0.08, 0x826b5d],
+				[-5.8, 50, 0.06, 0x697b7d],
+				[5.8, -50, Math.PI, 0x756f61],
+				[-28.8, 10, Math.PI, 0x7d6a5e],
+				[28.8, 50, 0.05, 0x6c7770],
+			].forEach(([x, z, rotation, color]) => addAbandonedCar(x, z, rotation, color));
+
+			const cityEntry = new THREE.Group();
+			cityEntry.position.set(-10.5, -1.14, -57);
+			const entryPillarMaterial = new THREE.MeshStandardMaterial({ color: 0x64756a, roughness: 0.86 });
+			for (const pillarX of [-4.3, 4.3]) {
+				const pillar = new THREE.Mesh(new THREE.BoxGeometry(0.42, 3.8, 0.5), entryPillarMaterial);
+				pillar.position.set(pillarX, 1.9, 0);
+				cityEntry.add(pillar);
+			}
+			const entrySign = new THREE.Mesh(new THREE.BoxGeometry(9, 1.25, 0.34), urbanRoofMaterial);
+			entrySign.position.set(0, 3.35, 0);
+			cityEntry.add(entrySign);
+			addUrbanSign(cityEntry, "RIVIÈRE-CENDRE · 18 204 HABITANTS", 0, 3.35, 0.19, 8.7, "#495a51");
+			town.add(cityEntry);
 
 			const markerRingMaterial = new THREE.MeshStandardMaterial({ color: 0xe59a75, emissive: 0x5d2917, emissiveIntensity: 0.12, roughness: 0.42 });
 			const markerCoreMaterial = new THREE.MeshStandardMaterial({ color: 0xf3dc9f, emissive: 0x624b1d, emissiveIntensity: 0.1, roughness: 0.38 });
@@ -897,6 +1791,61 @@
 				armPivot.add(hand);
 			}
 
+			const rightArm = armPivots.find((arm) => arm.side === 1);
+			const knifeModel = new THREE.Group();
+			const knifeHandleMaterial = new THREE.MeshStandardMaterial({ color: 0x68442d, roughness: 0.72 });
+			const knifeMetalMaterial = new THREE.MeshStandardMaterial({ color: 0xc6d1d2, metalness: 0.88, roughness: 0.24 });
+			const knifeHandle = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.075, 0.28, 12), knifeHandleMaterial);
+			knifeHandle.position.y = -0.15;
+			knifeModel.add(knifeHandle);
+			const knifeGuard = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.055, 0.1), knifeMetalMaterial);
+			knifeGuard.position.y = 0.015;
+			knifeModel.add(knifeGuard);
+			const knifeBladeShape = new THREE.Shape();
+			knifeBladeShape.moveTo(-0.085, 0);
+			knifeBladeShape.lineTo(0.085, 0);
+			knifeBladeShape.lineTo(0.07, 0.54);
+			knifeBladeShape.lineTo(0, 0.82);
+			knifeBladeShape.lineTo(-0.075, 0.54);
+			knifeBladeShape.closePath();
+			const knifeBlade = new THREE.Mesh(
+				new THREE.ExtrudeGeometry(knifeBladeShape, {
+					depth: 0.035,
+					bevelEnabled: true,
+					bevelSegments: 2,
+					steps: 1,
+					bevelSize: 0.01,
+					bevelThickness: 0.01,
+				}),
+				knifeMetalMaterial,
+			);
+			knifeBlade.position.y = 0.045;
+			knifeBlade.position.z = -0.018;
+			knifeModel.add(knifeBlade);
+			const knifeEdge = new THREE.Mesh(
+				new THREE.BoxGeometry(0.012, 0.45, 0.008),
+				new THREE.MeshStandardMaterial({ color: 0xf0f4eb, metalness: 0.82, roughness: 0.2 }),
+			);
+			knifeEdge.position.set(0.025, 0.34, 0.025);
+			knifeModel.add(knifeEdge);
+			knifeModel.position.set(0.45, -0.17, 0.16);
+			knifeModel.rotation.x = Math.PI / 2;
+			knifeModel.visible = false;
+			rightArm.group.add(knifeModel);
+
+			const firstPersonKnife = knifeModel.clone(true);
+			firstPersonKnife.position.set(0.62, -0.48, -1.15);
+			firstPersonKnife.rotation.set(-Math.PI / 2, 0, 0);
+			firstPersonKnife.scale.setScalar(0.8);
+			firstPersonKnife.visible = false;
+			fpsCamera.add(firstPersonKnife);
+
+			function updateWeaponVisibility() {
+				const hasKnifeEquipped = equippedWeapon?.name === "couteau de cuisine";
+				knifeModel.visible = hasKnifeEquipped && cameraState.mode !== 1;
+				firstPersonKnife.visible = hasKnifeEquipped && cameraState.mode === 1;
+			}
+
 			const face = new THREE.Group();
 			slime.add(face);
 
@@ -959,7 +1908,7 @@
 				roughness: 0.3,
 			});
 
-			function createZombieSlime(x, z, index) {
+			function createZombieSlime(x, z, index, building = null, y = 0) {
 				const group = new THREE.Group();
 				const baseColor = [0x77836b, 0x697b70, 0x85836a, 0x65766c][index % 4];
 				const bodyMaterial = new THREE.MeshPhysicalMaterial({
@@ -1012,14 +1961,16 @@
 					group.add(new THREE.Mesh(new THREE.TubeGeometry(tendrilCurve, 10, 0.065, 6, false), zombieTendrilMaterial));
 				}
 
-				const spawnPosition = new THREE.Vector3(x, 0, z);
+				const spawnPosition = new THREE.Vector3(x, y, z);
 				group.position.copy(spawnPosition);
+				group.visible = !building;
 				scene.add(group);
 				enemies.push({
 					group,
 					body,
 					baseColor,
 					spawnPosition,
+					building,
 					health: 2,
 					speed: 0.56 + (index % 3) * 0.06,
 					attackReadyAt: 0,
@@ -1034,7 +1985,27 @@
 				[3.4, 15],
 				[-2.2, 23],
 				[2.8, 31],
+				[-5.4, -32],
+				[5.6, -12],
+				[-5.6, 28],
+				[5.4, 48],
+				[-28.6, -30],
+				[28.5, 10],
+				[-28.5, 50],
+				[28.5, -50],
 			].forEach(([x, z], index) => createZombieSlime(x, z, index));
+
+			for (const [index, building] of buildings.entries()) {
+				if (!building.hasZombieEncounter) continue;
+				building.group.updateWorldMatrix(true, false);
+				const interiorPosition = building.interior.localToWorld(new THREE.Vector3(
+					index % 2 === 0 ? -1.6 : 1.6,
+					0.475,
+					index % 3 === 0 ? -0.9 : 0.9,
+				));
+				createZombieSlime(interiorPosition.x, interiorPosition.z, index + 4, building, interiorPosition.y);
+				building.interiorZombie = enemies.at(-1);
+			}
 
 			function resize() {
 				const width = window.innerWidth;
@@ -1044,7 +2015,9 @@
 				perspectiveCamera.aspect = aspect;
 				const horizontalSpace = 3.8 / (2 * Math.tan(THREE.MathUtils.degToRad(perspectiveCamera.fov / 2)) * aspect);
 				cameraState.baseDistance = Math.max(5.8, horizontalSpace);
-				cameraState.distance = cameraState.baseDistance;
+				cameraState.distance = activeBuilding
+					? Math.max(cameraState.baseDistance * 1.35, 10)
+					: cameraState.baseDistance;
 				fpsCamera.updateProjectionMatrix();
 				perspectiveCamera.updateProjectionMatrix();
 				const frustumHeight = Math.max(3.2, 3.8 / aspect);
@@ -1059,8 +2032,16 @@
 			window.addEventListener("resize", resize);
 			resize();
 
+			function getIsometricYaw(building = activeBuilding) {
+				return Math.PI / 4 + (building?.group.rotation.y ?? 0);
+			}
+
 			function setCameraMode(mode) {
 				cameraState.mode = mode;
+				cameraControl.hidden = mode === 3;
+				if (mode === 3 && document.pointerLockElement === canvas) {
+					document.exitPointerLock();
+				}
 				camera = mode === 1 ? fpsCamera : mode >= 3 ? orthographicCamera : perspectiveCamera;
 				body.visible = mode !== 1;
 				face.visible = mode !== 1;
@@ -1077,17 +2058,20 @@
 				} else if (mode === 2) {
 					cameraState.yaw = slime.rotation.y + Math.PI;
 					cameraState.pitch = activeBuilding ? 0.8 : 0.2;
-					cameraState.distance = activeBuilding ? Math.max(cameraState.baseDistance, 5.8) : cameraState.baseDistance;
+					cameraState.distance = activeBuilding
+						? Math.max(cameraState.baseDistance * 1.35, 10)
+						: cameraState.baseDistance;
 				} else if (mode === 3) {
-					cameraState.yaw = Math.PI / 4;
-					orthographicCamera.zoom = activeBuilding ? 0.68 : 0.34;
+					cameraState.yaw = getIsometricYaw();
+					orthographicCamera.zoom = activeBuilding ? 0.42 : 0.34;
 					orthographicCamera.updateProjectionMatrix();
 				} else {
 					cameraState.yaw = Math.PI;
 					slime.rotation.y = Math.PI / 3;
-					orthographicCamera.zoom = activeBuilding ? 0.68 : 0.34;
+					orthographicCamera.zoom = activeBuilding ? 0.42 : 0.34;
 					orthographicCamera.updateProjectionMatrix();
 				}
+				updateWeaponVisibility();
 			}
 
 			for (const button of cameraModeButtons) {
@@ -1142,6 +2126,7 @@
 						equipButton.classList.toggle("is-equipped", equippedWeapon === item);
 						equipButton.addEventListener("click", () => {
 							equippedWeapon = equippedWeapon === item ? null : item;
+							updateWeaponVisibility();
 							renderInventory();
 						});
 						row.append(equipButton);
@@ -1171,6 +2156,7 @@
 			}
 
 			function requestMouseLock() {
+				if (cameraState.mode === 3) return;
 				if (typeof canvas.requestPointerLock !== "function") return;
 				const lockRequest = canvas.requestPointerLock();
 				if (lockRequest?.catch) lockRequest.catch(() => {});
@@ -1215,6 +2201,13 @@
 			const movementKeys = new Set(["KeyW", "KeyA", "KeyS", "KeyD", "ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"]);
 			const cameraModes = new Map([["Digit1", 1], ["Digit2", 2], ["Digit3", 3], ["Digit4", 4]]);
 			window.addEventListener("keydown", (event) => {
+				if (!gameStarted) {
+					if (event.code === "Enter" || event.code === "NumpadEnter") {
+						event.preventDefault();
+						startGame();
+					}
+					return;
+				}
 				if (event.code === "KeyR" && gameOver) {
 					event.preventDefault();
 					restartSurvival();
@@ -1228,11 +2221,6 @@
 				if (event.code === "KeyE") {
 					event.preventDefault();
 					if (!event.repeat) interact();
-					return;
-				}
-				if (event.code === "KeyQ") {
-					event.preventDefault();
-					if (!event.repeat) exitBuilding();
 					return;
 				}
 				if (event.code === "Escape" && !inventoryPanel.hidden) {
@@ -1253,14 +2241,20 @@
 			window.addEventListener("blur", () => pressedKeys.clear());
 
 			function resolveHouseCollision(position, previousPosition, radius, excludedBuilding = null) {
-				for (const building of buildings) {
-					if (building === excludedBuilding) continue;
-					building.group.updateWorldMatrix(true, false);
-					const localPosition = building.group.worldToLocal(position.clone());
-					const previousLocalPosition = building.group.worldToLocal(previousPosition.clone());
-					const localRadius = radius / building.group.scale.x;
-					const halfWidth = 1.875 + localRadius;
-					const halfDepth = 1.775 + localRadius;
+				for (const solid of collisionSolids) {
+					if (solid.group === excludedBuilding?.group) continue;
+					solid.group.updateWorldMatrix(true, false);
+					const localPosition = solid.group.worldToLocal(position.clone());
+					const previousLocalPosition = solid.group.worldToLocal(previousPosition.clone());
+					const localRadius = radius / solid.group.scale.x;
+					const centerX = solid.centerX ?? 0;
+					const centerZ = solid.centerZ ?? 0;
+					localPosition.x -= centerX;
+					localPosition.z -= centerZ;
+					previousLocalPosition.x -= centerX;
+					previousLocalPosition.z -= centerZ;
+					const halfWidth = solid.halfWidth + localRadius;
+					const halfDepth = solid.halfDepth + localRadius;
 					if (Math.abs(localPosition.x) >= halfWidth || Math.abs(localPosition.z) >= halfDepth) continue;
 
 					const enteredFromX = Math.abs(previousLocalPosition.x) >= halfWidth;
@@ -1272,7 +2266,9 @@
 					} else {
 						localPosition.z = Math.sign(previousLocalPosition.z || localPosition.z) * halfDepth;
 					}
-					position.copy(building.group.localToWorld(localPosition));
+					localPosition.x += centerX;
+					localPosition.z += centerZ;
+					position.copy(solid.group.localToWorld(localPosition));
 				}
 			}
 
@@ -1300,8 +2296,8 @@
 				if (activeBuilding) {
 					activeBuilding.group.updateWorldMatrix(true, false);
 					const localPosition = activeBuilding.group.worldToLocal(slime.position.clone());
-					localPosition.x = THREE.MathUtils.clamp(localPosition.x, -1.2, 1.2);
-					localPosition.z = THREE.MathUtils.clamp(localPosition.z, -1.15, 1.15);
+					localPosition.x = THREE.MathUtils.clamp(localPosition.x, -activeBuilding.roomBounds.x, activeBuilding.roomBounds.x);
+					localPosition.z = THREE.MathUtils.clamp(localPosition.z, -activeBuilding.roomBounds.z, activeBuilding.roomBounds.z);
 					slime.position.copy(activeBuilding.group.localToWorld(localPosition));
 				}
 				resolveHouseCollision(slime.position, previousPosition, 0.48, activeBuilding);
@@ -1324,6 +2320,16 @@
 				nearbyContainerDistance = Infinity;
 
 				if (activeBuilding) {
+					const doorPosition = activeBuilding.group.localToWorld(activeBuilding.interiorDoorPosition.clone());
+					const doorDistance = Math.hypot(
+						doorPosition.x - slime.position.x,
+						doorPosition.z - slime.position.z,
+					);
+					if (doorDistance <= 1.65) {
+						interactionHint.textContent = "E · Ouvrir la porte et sortir";
+						return;
+					}
+
 					for (const container of activeBuilding.containers) {
 						if (container.searched) continue;
 						const worldPosition = container.mesh.getWorldPosition(new THREE.Vector3());
@@ -1335,13 +2341,13 @@
 					}
 
 					interactionHint.textContent = nearbyContainer && nearbyContainerDistance <= 2.2
-						? `E · Fouiller le ${nearbyContainer.label}  |  Q · Sortir`
-						: "Q · Sortir de la maison";
+						? `E · Fouiller : ${nearbyContainer.label}`
+						: "Approche-toi de la porte pour sortir";
 					return;
 				}
 
 				let closestDistance = Infinity;
-				for (const building of buildings) {
+				for (const building of interactiveBuildings) {
 					const doorPosition = building.group.localToWorld(building.doorPosition.clone());
 					const distance = Math.hypot(doorPosition.x - slime.position.x, doorPosition.z - slime.position.z);
 					if (distance < closestDistance) {
@@ -1350,7 +2356,7 @@
 					}
 				}
 				interactionHint.textContent = nearbyBuilding && closestDistance <= 2.35
-					? "E · Entrer dans la maison"
+					? (nearbyBuilding.isLandmark ? "E · Entrer dans le bâtiment" : "E · Entrer dans la maison")
 					: "";
 			}
 
@@ -1365,14 +2371,18 @@
 				for (const enemy of enemies) enemy.group.visible = false;
 				scene.background = new THREE.Color(0x38342e);
 				building.group.updateWorldMatrix(true, false);
-				slime.position.copy(building.group.localToWorld(new THREE.Vector3(0, 0.95, 0.28)));
+				building.interiorDoorOpen = true;
+				if (building.interiorZombie?.alive) building.interiorZombie.group.visible = true;
+				slime.position.copy(building.group.localToWorld(new THREE.Vector3(0, 0.95, 2.15)));
 				slime.rotation.y = building.group.rotation.y;
 				slime.scale.setScalar(slimeWorldScale * 0.72);
-				cameraState.yaw = slime.rotation.y + Math.PI;
-				cameraState.pitch = 0.8;
-				cameraState.distance = Math.max(cameraState.baseDistance, 5.8);
+				cameraState.yaw = cameraState.mode === 3
+					? getIsometricYaw(building)
+					: slime.rotation.y + Math.PI;
+				cameraState.pitch = 0.68;
+				cameraState.distance = Math.max(cameraState.baseDistance * 1.35, 10);
 				if (cameraState.mode >= 3) {
-					orthographicCamera.zoom = 0.68;
+					orthographicCamera.zoom = 0.42;
 					orthographicCamera.updateProjectionMatrix();
 				}
 				movementVelocity.set(0, 0, 0);
@@ -1384,18 +2394,22 @@
 				const building = activeBuilding;
 				building.group.updateWorldMatrix(true, false);
 				slime.position.copy(building.group.localToWorld(new THREE.Vector3(0, 0.95, 2.15)));
+				building.interiorDoorOpen = false;
 				building.exterior.visible = true;
 				building.interior.visible = false;
+				if (building.interiorZombie) building.interiorZombie.group.visible = false;
 				activeBuilding = null;
 				ground.visible = true;
 				groundGrid.visible = true;
 				for (const townObject of town.children) townObject.visible = true;
 				for (const marker of worldMarkers) marker.visible = true;
-				for (const enemy of enemies) enemy.group.visible = enemy.alive;
+				for (const enemy of enemies) enemy.group.visible = enemy.alive && !enemy.building;
 				scene.background = null;
 				slime.scale.setScalar(slimeWorldScale);
 				movementVelocity.set(0, 0, 0);
-				cameraState.yaw = slime.rotation.y + Math.PI;
+				cameraState.yaw = cameraState.mode === 3
+					? getIsometricYaw(null)
+					: slime.rotation.y + Math.PI;
 				cameraState.pitch = 0.2;
 				cameraState.distance = cameraState.baseDistance;
 				if (cameraState.mode >= 3) {
@@ -1407,6 +2421,15 @@
 			function interact() {
 				updateInteractionState();
 				if (activeBuilding) {
+					const doorPosition = activeBuilding.group.localToWorld(activeBuilding.interiorDoorPosition.clone());
+					const doorDistance = Math.hypot(
+						doorPosition.x - slime.position.x,
+						doorPosition.z - slime.position.z,
+					);
+					if (doorDistance <= 1.65) {
+						exitBuilding();
+						return;
+					}
 					if (nearbyContainer && nearbyContainerDistance <= 2.2) {
 						nearbyContainer.searched = true;
 						inventory.push(createInventoryItem(nearbyContainer.loot));
@@ -1414,8 +2437,6 @@
 						nearbyContainer.mesh.material = new THREE.MeshStandardMaterial({ color: 0x77766b, roughness: 0.95 });
 						lootNotice.textContent = `Trouvé : ${nearbyContainer.loot}`;
 						lootNoticeUntil = performance.now() + 2600;
-					} else {
-						exitBuilding();
 					}
 					return;
 				}
@@ -1464,24 +2485,45 @@
 
 				for (const enemy of enemies) {
 					if (!enemy.alive) continue;
-					const offsetX = slime.position.x - enemy.group.position.x;
-					const offsetZ = slime.position.z - enemy.group.position.z;
-					let distance = Math.hypot(offsetX, offsetZ);
-
-					if (!gameOver && !activeBuilding && distance < 24 && distance > 1.15) {
-						const previousPosition = enemy.group.position.clone();
-						enemy.group.position.x += (offsetX / distance) * enemy.speed * delta;
-						enemy.group.position.z += (offsetZ / distance) * enemy.speed * delta;
-						resolveHouseCollision(enemy.group.position, previousPosition, 0.42);
-						enemy.group.rotation.y = Math.atan2(offsetX, offsetZ);
-						distance = Math.hypot(slime.position.x - enemy.group.position.x, slime.position.z - enemy.group.position.z);
+					if (enemy.building !== activeBuilding) continue;
+					let offsetX;
+					let offsetZ;
+					let distance;
+					if (enemy.building) {
+						const localPlayer = enemy.building.group.worldToLocal(slime.position.clone());
+						const localEnemy = enemy.building.group.worldToLocal(enemy.group.position.clone());
+						offsetX = localPlayer.x - localEnemy.x;
+						offsetZ = localPlayer.z - localEnemy.z;
+						const localDistance = Math.hypot(offsetX, offsetZ);
+						distance = localDistance * enemy.building.group.scale.x;
+						if (!gameOver && distance < 24 && distance > 1.15) {
+							localEnemy.x += (offsetX / localDistance) * enemy.speed * delta / enemy.building.group.scale.x;
+							localEnemy.z += (offsetZ / localDistance) * enemy.speed * delta / enemy.building.group.scale.x;
+							localEnemy.x = THREE.MathUtils.clamp(localEnemy.x, -enemy.building.roomBounds.x, enemy.building.roomBounds.x);
+							localEnemy.z = THREE.MathUtils.clamp(localEnemy.z, -enemy.building.roomBounds.z, enemy.building.roomBounds.z);
+							enemy.group.position.copy(enemy.building.group.localToWorld(localEnemy));
+							enemy.group.rotation.y = Math.atan2(offsetX, offsetZ) + enemy.building.group.rotation.y;
+							distance = Math.hypot(slime.position.x - enemy.group.position.x, slime.position.z - enemy.group.position.z);
+						}
+					} else {
+						offsetX = slime.position.x - enemy.group.position.x;
+						offsetZ = slime.position.z - enemy.group.position.z;
+						distance = Math.hypot(offsetX, offsetZ);
+						if (!gameOver && distance < 24 && distance > 1.15) {
+							const previousPosition = enemy.group.position.clone();
+							enemy.group.position.x += (offsetX / distance) * enemy.speed * delta;
+							enemy.group.position.z += (offsetZ / distance) * enemy.speed * delta;
+							resolveHouseCollision(enemy.group.position, previousPosition, 0.42);
+							enemy.group.rotation.y = Math.atan2(offsetX, offsetZ);
+							distance = Math.hypot(slime.position.x - enemy.group.position.x, slime.position.z - enemy.group.position.z);
+						}
 					}
 
-					enemy.group.position.y = Math.sin(time * 2.4 + enemy.phase) * 0.035;
+					enemy.group.position.y = enemy.spawnPosition.y + Math.sin(time * 2.4 + enemy.phase) * 0.035;
 					if (now >= enemy.flashUntil) enemy.body.material.color.setHex(enemy.baseColor);
 					nearestDistance = Math.min(nearestDistance, distance);
 
-					if (!activeBuilding && distance <= 1.25 && now >= enemy.attackReadyAt) {
+					if (distance <= 1.25 && now >= enemy.attackReadyAt) {
 						enemy.attackReadyAt = now + 1700;
 						damagePlayer(7, now);
 					}
@@ -1501,11 +2543,12 @@
 			const now = performance.now();
 			if (now < nextAttackAt) return;
 					nextAttackAt = now + 360;
+					attackAnimationStartedAt = now;
 
 			let target = null;
 			let targetDistance = Infinity;
 			for (const enemy of enemies) {
-				if (!enemy.alive) continue;
+				if (!enemy.alive || enemy.building !== activeBuilding) continue;
 				const distance = Math.hypot(slime.position.x - enemy.group.position.x, slime.position.z - enemy.group.position.z);
 				if (distance < targetDistance) {
 					target = enemy;
@@ -1539,7 +2582,7 @@
 				slime.position.copy(playerStartPosition);
 				slime.scale.setScalar(slimeWorldScale);
 				movementVelocity.set(0, 0, 0);
-				cameraState.yaw = Math.PI;
+				cameraState.yaw = cameraState.mode === 3 ? getIsometricYaw(null) : Math.PI;
 				cameraState.pitch = 0.2;
 				cameraState.distance = cameraState.baseDistance;
 				for (const enemy of enemies) {
@@ -1548,6 +2591,7 @@
 					enemy.attackReadyAt = 0;
 					enemy.group.position.copy(enemy.spawnPosition);
 					enemy.body.material.color.setHex(enemy.baseColor);
+					enemy.group.visible = !enemy.building;
 					if (!enemy.group.parent) scene.add(enemy.group);
 				}
 				combatMessage = "";
@@ -1557,20 +2601,45 @@
 
 			const timer = new THREE.Timer();
 			timer.connect(document);
+			function getAttackSwing(elapsed) {
+				if (elapsed < 0 || elapsed >= 430) return 0;
+				if (elapsed < 110) return 0.9 * THREE.MathUtils.smoothstep(elapsed, 0, 110);
+				if (elapsed < 240) {
+					return 0.9 - 2.25 * THREE.MathUtils.smoothstep(elapsed, 110, 240);
+				}
+				return -1.35 * (1 - THREE.MathUtils.smoothstep(elapsed, 240, 430));
+			}
+
 			function animate(timestamp) {
 				timer.update(timestamp);
 				const time = timer.getElapsed();
 				const delta = Math.min(timer.getDelta(), 0.05);
-				moveSlime(delta);
-				updateEnemies(delta, time);
-				updateInteractionState();
+				const attackElapsed = performance.now() - attackAnimationStartedAt;
+				const attackSwing = getAttackSwing(attackElapsed);
+				if (gameStarted) {
+					moveSlime(delta);
+					updateEnemies(delta, time);
+					updateInteractionState();
+				}
+				for (const building of interactiveBuildings) {
+					const targetDoorAngle = building.interiorDoorOpen ? Math.PI / 2 : 0;
+					building.interiorDoor.rotation.y = THREE.MathUtils.damp(
+						building.interiorDoor.rotation.y,
+						targetDoorAngle,
+						10,
+						delta,
+					);
+				}
 				if (performance.now() > lootNoticeUntil) lootNotice.textContent = "";
 				slime.position.y = Math.sin(time * 1.7) * 0.055;
 				slime.scale.y = slimeWorldScale * (activeBuilding ? 0.72 : 1) * (1 + Math.sin(time * 1.7 + 0.6) * 0.018);
 				slime.rotation.z = Math.sin(time * 0.8) * 0.025;
 				for (const arm of armPivots) {
-					arm.group.rotation.z = arm.side * (0.08 + Math.sin(time * 2 + arm.side) * 0.07);
+					const idleRotation = arm.side * (0.08 + Math.sin(time * 2 + arm.side) * 0.07);
+					arm.group.rotation.z = idleRotation + (arm.side === 1 ? attackSwing : 0);
 				}
+				firstPersonKnife.position.set(0.62 - attackSwing * 0.12, -0.48 + Math.abs(attackSwing) * 0.05, -1.15);
+				firstPersonKnife.rotation.set(-Math.PI / 2, 0, -attackSwing * 0.55);
 				const forwardX = -Math.sin(cameraState.yaw);
 				const forwardZ = -Math.cos(cameraState.yaw);
 				if (cameraState.mode === 1) {
@@ -1579,13 +2648,15 @@
 					if (activeBuilding) {
 						const localPlayer = activeBuilding.group.worldToLocal(slime.position.clone());
 						const localYaw = cameraState.yaw - activeBuilding.group.rotation.y;
+						const cameraDistance = cameraState.distance / activeBuilding.group.scale.x;
+						const horizontalDistance = cameraDistance * Math.cos(cameraState.pitch);
 						const cameraLocal = new THREE.Vector3(
-							THREE.MathUtils.clamp(localPlayer.x + Math.sin(localYaw) * 1.25, -1.3, 1.3),
-							2.35,
-							THREE.MathUtils.clamp(localPlayer.z + Math.cos(localYaw) * 1.25, -1.3, 1.3),
+							localPlayer.x + Math.sin(localYaw) * horizontalDistance,
+							localPlayer.y + 0.65 + Math.sin(cameraState.pitch) * cameraDistance,
+							localPlayer.z + Math.cos(localYaw) * horizontalDistance,
 						);
 						camera.position.copy(activeBuilding.group.localToWorld(cameraLocal));
-						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, 0.5, localPlayer.z)));
+						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, localPlayer.y + 0.35, localPlayer.z)));
 					} else {
 						const horizontalDistance = cameraState.distance * Math.cos(cameraState.pitch);
 						camera.position.set(
@@ -1603,11 +2674,11 @@
 					if (activeBuilding) {
 						const localPlayer = activeBuilding.group.worldToLocal(slime.position.clone());
 						camera.position.copy(activeBuilding.group.localToWorld(new THREE.Vector3(
-							THREE.MathUtils.clamp(localPlayer.x + 0.95, -1.3, 1.3),
-							5.5,
-							THREE.MathUtils.clamp(localPlayer.z + 0.95, -1.3, 1.3),
+							localPlayer.x + 2.1,
+							7,
+							localPlayer.z + 2.1,
 						)));
-						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, 0.45, localPlayer.z)));
+						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, localPlayer.y + 0.25, localPlayer.z)));
 					} else {
 						const offset = 11 / Math.sqrt(3);
 						camera.position.set(slime.position.x + offset, slime.position.y + offset, slime.position.z + offset);
@@ -1618,10 +2689,10 @@
 						const localPlayer = activeBuilding.group.worldToLocal(slime.position.clone());
 						camera.position.copy(activeBuilding.group.localToWorld(new THREE.Vector3(
 							localPlayer.x,
-							1.75,
-							THREE.MathUtils.clamp(localPlayer.z + 1.2, -1.3, 1.3),
+							2.8,
+							localPlayer.z + 2.4,
 						)));
-						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, 0.35, localPlayer.z)));
+						camera.lookAt(activeBuilding.group.localToWorld(new THREE.Vector3(localPlayer.x, localPlayer.y + 0.25, localPlayer.z)));
 					} else {
 						camera.position.set(slime.position.x, slime.position.y + 1.25, slime.position.z + 8);
 						camera.lookAt(slime.position.x, slime.position.y + 0.05, slime.position.z);
